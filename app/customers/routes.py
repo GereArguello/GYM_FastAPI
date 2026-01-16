@@ -66,9 +66,9 @@ def update_customer(customer_id: int, customer_data: CustomerUpdate, session: Se
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, 
                             detail="Cliente no encontrado")
     
-    data = customer_data.model_dump(exclude_unset=True)
+    update_data = customer_data.model_dump(exclude_unset=True)
 
-    customer.sqlmodel_update(data)
+    customer.sqlmodel_update(update_data)
     try:
         session.commit()
         session.refresh(customer)
