@@ -2,7 +2,7 @@ from datetime import date
 from typing import Optional, TYPE_CHECKING
 from sqlmodel import SQLModel, Field, Relationship
 from pydantic import EmailStr
-from core.enums import StatusEnum
+from app.core.enums import StatusEnum
 
 # SOLO PARA IDE, EVITA IMPORTS CIRCULARES
 if TYPE_CHECKING:
@@ -13,7 +13,8 @@ if TYPE_CHECKING:
 class Customer(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
 
-    name: str
+    first_name: str
+    last_name: str
     birth_date: date
     email: EmailStr = Field(nullable=False, unique=True)
     is_active: StatusEnum = Field(default=StatusEnum.ACTIVE)

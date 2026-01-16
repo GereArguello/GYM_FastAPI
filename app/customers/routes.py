@@ -1,14 +1,17 @@
 from fastapi import APIRouter, status, HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
-from core.database import SessionDep
-from customers.models import Customer
-from customers.schemas import CustomerCreate, CustomerRead, CustomerUpdate
+from app.core.database import SessionDep
+from app.customers.models import Customer
+from app.customers.schemas import CustomerCreate, CustomerRead, CustomerUpdate
 
-router = APIRouter(tags=["customers"])
+router = APIRouter(
+    prefix="/customers",
+    tags=["customers"]
+)
 
 
-@router.post("/customers",
+@router.post("/",
             response_model=CustomerRead,
             status_code=status.HTTP_201_CREATED
 )
@@ -28,7 +31,7 @@ def create_customer(customer_data: CustomerCreate,session: SessionDep):
             detail="El email ya está siendo utilizado"
         )
 
-@router.get("/customers", response_model=list[CustomerRead])
+@router.get("/", response_model=list[CustomerRead])
 def list_customers(
     session: SessionDep,
     include_inactive: bool = False, 
@@ -47,7 +50,7 @@ def list_customers(
     
     return session.exec(query).all()
 
-@router.get("/customers/{customer_id}", response_model=CustomerRead)
+@router.get("/{customer_id}", response_model=CustomerRead)
 def read_customer(customer_id: int, session: SessionDep):    
     customer = session.get(Customer, customer_id)
     if not customer or not customer.is_active:
@@ -55,7 +58,7 @@ def read_customer(customer_id: int, session: SessionDep):
                             detail="Cliente no encontrado")
     return customer
 
-@router.patch("/customers/{customer_id}", response_model=CustomerRead, status_code=status.HTTP_200_OK)
+@router.patch("/{customer_id}", response_model=CustomerRead, status_code=status.HTTP_200_OK)
 def update_customer(customer_id: int, customer_data: CustomerUpdate, session: SessionDep):
     customer = session.get(Customer, customer_id)
 
@@ -78,7 +81,7 @@ def update_customer(customer_id: int, customer_data: CustomerUpdate, session: Se
 
     return customer
 
-@router.delete("/customers/{customer_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{customer_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_customer(customer_id: int, session: SessionDep):
     customer = session.get(Customer, customer_id)
 
@@ -88,5 +91,4 @@ def delete_customer(customer_id: int, session: SessionDep):
     
     session.delete(customer)
     session.commit()
-    return {"detail": "ok"}
 
