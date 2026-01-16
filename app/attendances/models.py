@@ -1,6 +1,10 @@
 from sqlmodel import SQLModel, Field, Relationship
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 from datetime import datetime
+
+
+if TYPE_CHECKING:
+    from customers.models import Customer
 
 class Attendance(SQLModel, table=True):
     id : Optional[int] = Field(default=None, primary_key=True)

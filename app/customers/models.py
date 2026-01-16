@@ -1,9 +1,13 @@
 from datetime import date
 from sqlmodel import SQLModel, Field, Relationship
 from pydantic import EmailStr
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 from core.enums import StatusEnum
 
+# SOLO PARA IDE, EVITA IMPORTS CIRCULARES
+if TYPE_CHECKING:
+    from memberships.models import Membership
+    from attendances.models import Attendance
 
 class CustomerBase(SQLModel):
     name: str
