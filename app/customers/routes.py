@@ -1,9 +1,12 @@
 from fastapi import APIRouter, status, HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
+from datetime import date
 from app.core.database import SessionDep
-from app.customers.models import Customer
-from app.customers.schemas import CustomerCreate, CustomerRead, CustomerUpdate
+from app.core.enums import StatusEnum
+from app.customers.models import Customer, CustomerMembership
+from app.customers.schemas import CustomerCreate, CustomerRead, CustomerUpdate, CustomerMembershipRead
+from app.memberships.models import Membership
 
 router = APIRouter(
     prefix="/customers",
@@ -43,10 +46,13 @@ def list_customers(
     #--- A futuro los no activos solo serán visibles para el staff ---#
     
     if not include_inactive:
-        query = query.where(Customer.is_active == True)
+        query = query.where(Customer.is_active == StatusEnum.ACTIVE)
 
     if search:
-        query = query.where(Customer.name.ilike(f"%{search}%"))
+            query = query.where(
+        (Customer.first_name.ilike(f"%{search}%")) |
+        (Customer.last_name.ilike(f"%{search}%"))
+    )
     
     return session.exec(query).all()
 
@@ -92,3 +98,51 @@ def delete_customer(customer_id: int, session: SessionDep):
     session.delete(customer)
     session.commit()
 
+@router.post("/{customer_id}/membership/{membership_id}",
+             response_model=CustomerMembershipRead,
+             status_code=status.HTTP_201_CREATED)
+def assign_membership(
+    customer_id: int,
+    membership_id: int,
+    session: SessionDep
+):
+    customer = session.get(Customer, customer_id)
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer no encontrado")
+
+    membership = session.get(Membership, membership_id)
+    if not membership:
+        raise HTTPException(status_code=404, detail="Membership no encontrada")
+
+    # Desactivar membership activa previa (si existe)
+    active_membership = session.exec(
+        select(CustomerMembership)
+        .where(
+            CustomerMembership.customer_id == customer_id,
+            CustomerMembership.is_active == True
+        )
+    ).first()
+
+    # Verificar que no se asigne la misma membresía
+    if active_membership and active_membership.membership_id == membership_id:
+        raise HTTPException(
+            status_code=400,
+            detail="El cliente ya posee esta membresía activa"
+        )
+
+    # Desactivar membresía actual
+    if active_membership:
+        active_membership.is_active = False
+        active_membership.end_date = date.today()
+
+    # Crear nueva membresía
+    customer_membership = CustomerMembership(
+        customer_id=customer_id,
+        membership_id=membership_id
+    )
+
+    session.add(customer_membership)
+    session.commit()
+    session.refresh(customer_membership)
+
+    return customer_membership

@@ -2,7 +2,7 @@ from sqlmodel import SQLModel, Field, Relationship
 from typing import Optional, List, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from customers.models import Customer
+    from customers.models import CustomerMembership
 
 class Membership(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -11,4 +11,4 @@ class Membership(SQLModel, table=True):
     points_multiplier: float = Field(gt=0)
     is_active: bool = True
 
-    customers: List["Customer"] = Relationship(back_populates="membership")
+    customer_memberships: List["CustomerMembership"] = Relationship(back_populates="membership")
