@@ -146,3 +146,41 @@ def assign_membership(
     session.refresh(customer_membership)
 
     return customer_membership
+
+@router.get("/memberships", response_model=list[CustomerMembershipRead])
+def list_customer_memberships(
+    session: SessionDep,
+    include_inactive: bool=False 
+):
+    query = select(CustomerMembership)
+
+    if not include_inactive:
+        query = query.where(CustomerMembership.is_active == True)
+    
+    return session.exec(query).all()
+
+@router.get("/{customer_id}/membership/active", response_model=CustomerMembershipRead)
+def get_active_membership(
+    customer_id: int,
+    session: SessionDep
+):
+    # Validar customer
+    customer = session.get(Customer, customer_id)
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer no encontrado")
+
+    active_membership = session.exec(
+        select(CustomerMembership)
+        .where(
+            CustomerMembership.customer_id == customer_id,
+            CustomerMembership.is_active == True
+        )
+    ).first()
+
+    if not active_membership:
+        raise HTTPException(
+            status_code=404,
+            detail="El customer no posee una membresía activa"
+        )
+
+    return active_membership
