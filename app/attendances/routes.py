@@ -4,6 +4,7 @@ from sqlmodel import select, desc
 from datetime import datetime
 from app.attendances.schemas import AttendanceRead, AttendanceCreate
 from app.attendances.models import Attendance
+from app.customers.models import Customer, CustomerMembership
 from app.core.database import SessionDep
 
 
@@ -12,15 +13,43 @@ router = APIRouter(
     tags=["attendances"]
 )
 
-@router.post("/", response_model=AttendanceRead, status_code=status.HTTP_201_CREATED)
-def create_attendance(attendance_data: AttendanceCreate, session: SessionDep):
-    attendance = Attendance(**attendance_data.model_dump())
-    attendance.check_in = datetime.today()
+@router.post("/", response_model=AttendanceRead)
+def create_attendance(
+    data: AttendanceCreate,
+    session: SessionDep
+):
+    customer = session.get(Customer, data.customer_id)
+
+    if not customer:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Customer no encontrado"
+        )
+
+    customer_membership = session.exec(
+        select(CustomerMembership)
+        .where(
+            CustomerMembership.customer_id == customer.id,
+            CustomerMembership.is_active == True
+        )
+    ).first()
+
+    if not customer_membership:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Customer no tiene membresía activa"
+        )
+
+    attendance = Attendance(
+        customer_id=customer.id,
+        membership_id=customer_membership.membership_id,
+        check_in = datetime.today()
+    )
 
     session.add(attendance)
     session.commit()
     session.refresh(attendance)
-    
+
     return attendance
 
 @router.patch("/{attendance_id}/checkout", response_model=AttendanceRead, status_code=status.HTTP_200_OK)

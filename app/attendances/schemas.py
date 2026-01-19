@@ -5,7 +5,7 @@ from datetime import datetime
 
 class AttendanceCreate(SQLModel):
     customer_id : int 
-    membership_id : Optional[int]
+
     
 
 class AttendanceRead(SQLModel):
