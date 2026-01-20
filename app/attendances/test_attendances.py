@@ -24,7 +24,6 @@ def test_create_attendance_fails_if_customer_has_no_membership(client, customer)
 
 def test_create_attendance_fails_if_customer_has_reached_weekly_limit(
     client,
-    session,
     customer_with_membership
 ):
     customer_id = customer_with_membership["id"]
