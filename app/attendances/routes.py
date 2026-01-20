@@ -1,7 +1,7 @@
 from fastapi import APIRouter, status, HTTPException
 from typing import Optional, List
 from sqlmodel import select, desc
-from datetime import datetime
+from datetime import datetime, timezone
 from app.attendances.schemas import AttendanceRead, AttendanceCreate
 from app.attendances.models import Attendance
 from app.customers.models import Customer, CustomerMembership
@@ -13,7 +13,7 @@ router = APIRouter(
     tags=["attendances"]
 )
 
-@router.post("/", response_model=AttendanceRead)
+@router.post("/", response_model=AttendanceRead, status_code=status.HTTP_201_CREATED)
 def create_attendance(
     data: AttendanceCreate,
     session: SessionDep
@@ -43,7 +43,7 @@ def create_attendance(
     attendance = Attendance(
         customer_id=customer.id,
         membership_id=customer_membership.membership_id,
-        check_in = datetime.today()
+        check_in = datetime.now(timezone.utc)
     )
 
     session.add(attendance)
@@ -64,7 +64,11 @@ def checkout_attendance(attendance_id: int, session: SessionDep):
         raise HTTPException(status_code=status.HTTP_409_CONFLICT,
                             detail="Asistencia ya finalizada")
     
-    attendance.check_out = datetime.today()
+    attendance.check_out = datetime.now(timezone.utc)
+
+    #Normalizar tz
+    if attendance.check_in.tzinfo is None:
+        attendance.check_in = attendance.check_in.replace(tzinfo=timezone.utc)
 
     # calcular tiempo de asistencia
     td = attendance.check_out - attendance.check_in
