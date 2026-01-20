@@ -2,6 +2,7 @@ from fastapi import status
 from datetime import datetime, timezone, timedelta
 from app.attendances.models import Attendance
 
+
 def test_create_attendance(client, customer_with_membership):
     customer_id = customer_with_membership["id"]
 
@@ -20,6 +21,29 @@ def test_create_attendance_fails_if_customer_has_no_membership(client, customer)
     })
 
     assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+def test_create_attendance_fails_if_customer_has_reached_weekly_limit(
+    client,
+    session,
+    customer_with_membership
+):
+    customer_id = customer_with_membership["id"]
+
+    # Creamos el máximo permitido de asistencias
+    for _ in range(5):
+        response = client.post(
+            "/attendances/",
+            json={"customer_id": customer_id}
+        )
+        assert response.status_code == status.HTTP_201_CREATED
+
+    # Intentamos crear una más (debe fallar)
+    response = client.post(
+        "/attendances/",
+        json={"customer_id": customer_id}
+    )
+
+    assert response.status_code == status.HTTP_409_CONFLICT
 
 def test_checkout_attendance_not_found(client):
     response = client.patch("/attendances/999/checkout/")

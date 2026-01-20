@@ -6,6 +6,7 @@ from app.attendances.schemas import AttendanceRead, AttendanceCreate
 from app.attendances.models import Attendance
 from app.customers.models import Customer, CustomerMembership
 from app.core.database import SessionDep
+from app.core.utils import get_weekly_attendance_count
 
 
 router = APIRouter(
@@ -39,6 +40,12 @@ def create_attendance(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Customer no tiene membresía activa"
         )
+    
+    count_attendances = get_weekly_attendance_count(session, customer.id)
+
+    if count_attendances >= customer_membership.membership.max_days_per_week:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT,
+                            detail="Límite semanal de asistencias alcanzado")
 
     attendance = Attendance(
         customer_id=customer.id,
@@ -69,6 +76,9 @@ def checkout_attendance(attendance_id: int, session: SessionDep):
     #Normalizar tz
     if attendance.check_in.tzinfo is None:
         attendance.check_in = attendance.check_in.replace(tzinfo=timezone.utc)
+
+    if attendance.check_out.tzinfo is None:
+        attendance.check_out = attendance.check_out.replace(tzinfo=timezone.utc)
 
     # calcular tiempo de asistencia
     td = attendance.check_out - attendance.check_in
@@ -112,9 +122,3 @@ def read_attendance(attendance_id: int, session: SessionDep):
     
     return attendance
 
-
-
-
-    
-    
-    
