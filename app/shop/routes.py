@@ -43,7 +43,7 @@ def list_products(session: SessionDep, include_inactive: bool = False):
 
     return session.exec(query).all()
 
-@router.get("/{product_id}", response_model=ProductRead)
+@router.get("/{product_id}", response_model=ProductRead, status_code=status.HTTP_200_OK)
 def read_product(product_id: int, session: SessionDep):
     product = session.get(Product, product_id)
 
@@ -52,7 +52,7 @@ def read_product(product_id: int, session: SessionDep):
                             detail="Producto no encontrado")
     return product
     
-@router.patch("/{product_id}", response_model=ProductRead)
+@router.patch("/{product_id}", response_model=ProductRead, status_code=status.HTTP_200_OK)
 def update_product(
     product_id: int,
     product_data: ProductUpdate,
@@ -102,7 +102,7 @@ def update_product(
             detail="Ya existe un producto con ese nombre"
         )
     
-@router.patch("/{product_id}/activate", response_model=ProductRead)
+@router.patch("/{product_id}/activate", response_model=ProductRead, status_code=status.HTTP_200_OK)
 def activate_product(product_id: int,session: SessionDep):
     product = session.get(Product, product_id)
 

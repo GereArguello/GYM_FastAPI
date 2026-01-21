@@ -6,6 +6,7 @@ from sqlalchemy.pool import StaticPool
 from sqlmodel import SQLModel, Session
 from app.main import app
 from app.core.database import get_session
+from app.core.enums import ProductType
 
 sqlite_url = "sqlite://"
 
@@ -82,3 +83,18 @@ def checkout_attendance(client, attendance):
     response = client.patch(f"/attendances/{attendance_id}/checkout/")
     assert response.status_code == status.HTTP_200_OK
     return attendance_id
+
+@pytest.fixture(name="product")
+def product(client):
+    response = client.post(
+        "/shop/",
+        json={
+            "name": "Barra energética",
+            "description": "Avena",
+            "product_type": ProductType.POINTS.value,
+            "price": 500,
+            "stock": 20
+        }
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+    return response.json()
