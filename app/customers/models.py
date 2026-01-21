@@ -8,6 +8,7 @@ from app.core.enums import StatusEnum
 if TYPE_CHECKING:
     from memberships.models import Membership
     from attendances.models import Attendance
+    from redemptions.models import Redemption
 
 
 class Customer(SQLModel, table=True):
@@ -17,10 +18,12 @@ class Customer(SQLModel, table=True):
     last_name: str
     birth_date: date
     email: EmailStr = Field(nullable=False, unique=True)
+    points_balance: int = Field(default=0)
     is_active: StatusEnum = Field(default=StatusEnum.ACTIVE)
 
     attendances: list["Attendance"] = Relationship(back_populates="customer")
     memberships: list["CustomerMembership"] = Relationship(back_populates="customer")
+    redemptions: list["Redemption"] = Relationship(back_populates="customer")
 
 
 

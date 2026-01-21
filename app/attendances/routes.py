@@ -69,6 +69,12 @@ def checkout_attendance(attendance_id: int, session: SessionDep):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                             detail="Asistencia no encontrada")
     
+    customer = session.get(Customer, attendance.customer_id)
+
+    if not customer:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail="Customer no encontrado")
+    
     if attendance.check_out:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT,
                             detail="Asistencia ya finalizada")
@@ -83,6 +89,7 @@ def checkout_attendance(attendance_id: int, session: SessionDep):
     # HARDCODEADA COMO REFERENCIA
     if attendance.is_valid and attendance.membership_id:
         attendance.points_awarded = 10 * attendance.membership.points_multiplier
+        customer.points_balance += attendance.points_awarded
     else:
         attendance.points_awarded = 0
     
