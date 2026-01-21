@@ -66,7 +66,7 @@ def read_redemption(redemption_id: int, session: SessionDep):
     redemption = session.get(Redemption, redemption_id)
 
     if not redemption:
-        return HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                              detail="canje no encontrado")
     
     return redemption
