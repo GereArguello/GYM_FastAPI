@@ -2,6 +2,13 @@ from sqlmodel import select
 from datetime import datetime, timedelta, timezone
 from app.attendances.models import Attendance
 
+def finalize_attendance(attendance: Attendance) -> None:
+    td = attendance.check_out - attendance.check_in
+    attendance.duration_minutes = int(td.total_seconds() / 60)
+    attendance.is_valid = 30 <= attendance.duration_minutes < 300
+
+def normalize_datetime(dt: datetime) -> datetime:
+    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
 
 def get_weekly_attendance_count(
     session,

@@ -6,7 +6,9 @@ from app.attendances.schemas import AttendanceRead, AttendanceCreate
 from app.attendances.models import Attendance
 from app.customers.models import Customer, CustomerMembership
 from app.core.database import SessionDep
-from app.core.utils import get_weekly_attendance_count
+from app.attendances.services import (finalize_attendance, 
+                                      get_weekly_attendance_count,
+                                      normalize_datetime)
 
 
 router = APIRouter(
@@ -70,27 +72,13 @@ def checkout_attendance(attendance_id: int, session: SessionDep):
     if attendance.check_out:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT,
                             detail="Asistencia ya finalizada")
-    
-    attendance.check_out = datetime.now(timezone.utc)
 
     #Normalizar tz
-    if attendance.check_in.tzinfo is None:
-        attendance.check_in = attendance.check_in.replace(tzinfo=timezone.utc)
-
-    if attendance.check_out.tzinfo is None:
-        attendance.check_out = attendance.check_out.replace(tzinfo=timezone.utc)
+    attendance.check_out = normalize_datetime(datetime.now(timezone.utc))
+    attendance.check_in = normalize_datetime(attendance.check_in)
 
     # calcular tiempo de asistencia
-    td = attendance.check_out - attendance.check_in
-    minutos_totales = td.total_seconds() / 60
-    attendance.duration_minutes = int(minutos_totales)
-
-    if attendance.duration_minutes >= 300:
-        attendance.is_valid = False
-    elif attendance.duration_minutes < 30:
-        attendance.is_valid = False
-    else:
-        attendance.is_valid = True
+    finalize_attendance(attendance)
     
     # HARDCODEADA COMO REFERENCIA
     if attendance.is_valid and attendance.membership_id:
