@@ -8,7 +8,8 @@ from app.customers.models import Customer, CustomerMembership
 from app.core.database import SessionDep
 from app.attendances.services import (finalize_attendance, 
                                       get_weekly_attendance_count,
-                                      normalize_datetime)
+                                      normalize_datetime,
+                                      apply_attendance_points)
 
 
 router = APIRouter(
@@ -87,11 +88,7 @@ def checkout_attendance(attendance_id: int, session: SessionDep):
     finalize_attendance(attendance)
     
     # HARDCODEADA COMO REFERENCIA
-    if attendance.is_valid and attendance.membership_id:
-        attendance.points_awarded = 10 * attendance.membership.points_multiplier
-        customer.points_balance += attendance.points_awarded
-    else:
-        attendance.points_awarded = 0
+    apply_attendance_points(attendance, customer)
     
     session.commit()
     session.refresh(attendance)

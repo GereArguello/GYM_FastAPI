@@ -1,11 +1,23 @@
 from sqlmodel import select
 from datetime import datetime, timedelta, timezone
 from app.attendances.models import Attendance
+from app.customers.models import Customer
 
 def finalize_attendance(attendance: Attendance) -> None:
     td = attendance.check_out - attendance.check_in
     attendance.duration_minutes = int(td.total_seconds() / 60)
     attendance.is_valid = 30 <= attendance.duration_minutes < 300
+
+def apply_attendance_points(attendance: Attendance, customer: Customer):
+    active_membership = attendance.customer.active_membership
+
+    if attendance.is_valid and active_membership:
+        attendance.membership = active_membership.membership
+        attendance.membership_id = active_membership.membership_id
+        attendance.points_awarded = 10 * active_membership.membership.points_multiplier
+        attendance.customer.points_balance += attendance.points_awarded
+    else:
+        attendance.points_awarded = 0
 
 def normalize_datetime(dt: datetime) -> datetime:
     return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)

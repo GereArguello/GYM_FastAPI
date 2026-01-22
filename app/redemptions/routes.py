@@ -11,7 +11,7 @@ from app.core.enums import ProductType
 router = APIRouter(prefix="/redemptions",
                    tags=["redemptions"])
 
-@router.post("/{customer_id}/",response_model=RedemptionRead, status_code=status.HTTP_201_CREATED)
+@router.post("/{customer_id}",response_model=RedemptionRead, status_code=status.HTTP_201_CREATED)
 def create_redemption(data: RedemptionCreate, customer_id: int, session: SessionDep):
     
     product = session.get(Product, data.product_id)

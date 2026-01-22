@@ -3,8 +3,8 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from customers.models import Customer
-    from shop.models import Product
+    from app.customers.models import Customer
+    from app.shop.models import Product
 
 
 
