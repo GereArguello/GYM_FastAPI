@@ -14,11 +14,11 @@ if TYPE_CHECKING:
 
 class Customer(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-
+    user_id: int = Field(foreign_key="user.id", unique=True)
+    
     first_name: str
     last_name: str
     birth_date: date
-    email: EmailStr = Field(nullable=False, unique=True)
     points_balance: int = Field(default=0)
     is_active: StatusEnum = Field(default=StatusEnum.ACTIVE)
 
