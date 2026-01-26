@@ -18,7 +18,7 @@ router = APIRouter(
     tags=["auth"])
 
 
-@router.post("/login", response_model=Token)
+@router.post("/login", response_model=Token, status_code=status.HTTP_200_OK)
 async def login(form_data: OAuth2PasswordRequestForm = Depends(),
                 session: Session = Depends(get_session)):
     user = authenticate_user(session=session,
@@ -31,7 +31,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(),
         )
 
     access_token = create_access_token(
-        data={"sub": user.id,"role": user.role},
+        data={"sub": str(user.id),"role": user.role},
         expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     )
 

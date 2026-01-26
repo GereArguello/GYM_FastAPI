@@ -1,7 +1,6 @@
 from datetime import date
 from typing import Optional, TYPE_CHECKING
 from sqlmodel import SQLModel, Field, Relationship
-from pydantic import EmailStr
 from app.core.enums import StatusEnum
 
 # SOLO PARA IDE, EVITA IMPORTS CIRCULARES
@@ -15,7 +14,7 @@ if TYPE_CHECKING:
 class Customer(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     user_id: int = Field(foreign_key="user.id", unique=True)
-    
+
     first_name: str
     last_name: str
     birth_date: date

@@ -10,6 +10,7 @@ class CustomerCreate(SQLModel):
     last_name: str
     birth_date: date
     email: EmailStr
+    password: str
 
 
 
@@ -18,14 +19,13 @@ class CustomerRead(SQLModel):
     first_name: str
     last_name: str
     birth_date: date
-    email: EmailStr
+    points_balance: int
     is_active: StatusEnum
 
 class CustomerUpdate(SQLModel):
     first_name: str | None = None
     last_name: str | None = None
     birth_date: date | None = None
-    email: EmailStr | None = None
 
     model_config = {
         "extra": "forbid"

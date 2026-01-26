@@ -38,19 +38,27 @@ def client_fixture(session: Session):
     yield client
     app.dependency_overrides.clear()
 
-@pytest.fixture(name="customer")
-def customer(client):
-    response = client.post(
-        "/customers/",
-        json={
-            "first_name": "Pepe",
-            "last_name": "Perez",
-            "birth_date": "2000-12-12",
-            "email": "example@example.com"
-        }
-    )
-    assert response.status_code == status.HTTP_201_CREATED
-    return response.json()
+import pytest
+
+@pytest.fixture(name="customer_with_credentials")
+def customer_with_credentials(client):
+    payload = {
+        "first_name": "Pepe",
+        "last_name": "Perez",
+        "birth_date": "2000-12-12",
+        "email": "example@example.com",
+        "password": "password123"
+    }
+
+    response = client.post("/customers/", json=payload)
+    assert response.status_code == 201
+
+    return {
+        "customer": response.json(),
+        "email": payload["email"],
+        "password": payload["password"],
+    }
+
 
 @pytest.fixture(name="membership")
 def membership(client):

@@ -10,12 +10,16 @@ def test_create_customer_success(client):
             "first_name": "Pepe",
             "last_name": "Perez",
             "birth_date": "2000-12-12",
-            "email": "example@example.com"
+            "email": "example@example.com",
+            "password": "password123"
         }
     )
-
+    data = response.json()
     assert response.status_code == status.HTTP_201_CREATED
-    assert response.json()["email"] == "example@example.com"
+    assert data["first_name"] == "Pepe"
+    assert data["points_balance"] == 0
+    assert data["is_active"] == "active"
+
 
 
 def test_create_customer_duplicate_email(client):
@@ -25,7 +29,8 @@ def test_create_customer_duplicate_email(client):
             "first_name": "Pepe",
             "last_name": "Perez",
             "birth_date": "2000-12-12",
-            "email": "example@example.com"
+            "email": "example@example.com",
+            "password": "password123"
         }
     )
 
@@ -35,7 +40,8 @@ def test_create_customer_duplicate_email(client):
             "first_name": "Otro",
             "last_name": "Otro",
             "birth_date": "2001-12-12",
-            "email": "example@example.com"
+            "email": "example@example.com",
+            "password": "password123"
         }
     )
 
@@ -48,7 +54,8 @@ def test_read_customer(client):
             "first_name": "Pepe",
             "last_name": "Perez",
             "birth_date": "2000-12-12",
-            "email": "example@example.com"
+            "email": "example@example.com",
+            "password": "password123"
         }
     )
     customer_id: int = response.json()["id"]
@@ -65,7 +72,8 @@ def test_update_customer(client):
             "first_name": "Pepe",
             "last_name": "Perez",
             "birth_date": "2000-12-12",
-            "email": "example@example.com"
+            "email": "example@example.com",
+            "password": "password123"
         }
     )
     customer = response.json()
@@ -84,7 +92,7 @@ def test_update_customer(client):
 
     #Otros valores
     assert updated_customer["last_name"] == "Perez"
-    assert updated_customer["email"] == "example@example.com"
+
 
 def test_delete_customer(client, session):
     response = client.post(
@@ -93,7 +101,8 @@ def test_delete_customer(client, session):
             "first_name": "Pepe",
             "last_name": "Perez",
             "birth_date": "2000-12-12",
-            "email": "example@example.com"
+            "email": "example@example.com",
+            "password": "password123"
         }
     )
     customer_id = response.json()["id"]
@@ -113,7 +122,8 @@ def test_create_customer_membership(client):
             "first_name": "Pepe",
             "last_name": "Perez",
             "birth_date": "2000-12-12",
-            "email": "example@example.com"
+            "email": "example@example.com",
+            "password": "password123"
         }
     )
     assert response_customer.status_code == status.HTTP_201_CREATED
@@ -149,7 +159,8 @@ def test_assign_same_membership_twice_returns_400(client):
             "first_name": "Pepe",
             "last_name": "Perez",
             "birth_date": "2000-12-12",
-            "email": "example@example.com"
+            "email": "example@example.com",
+            "password": "password123"
         }
     )
     assert response_customer.status_code == status.HTTP_201_CREATED
@@ -183,7 +194,8 @@ def test_reassign_membership_deactivates_previous(client):
             "first_name": "Pepe",
             "last_name": "Perez",
             "birth_date": "2000-12-12",
-            "email": "example@example.com"
+            "email": "example@example.com",
+            "password": "password123"
         }
     )
     assert response_customer.status_code == status.HTTP_201_CREATED
@@ -239,7 +251,8 @@ def test_get_active_membership_returns_404_if_never_assigned(client):
             "first_name": "Pepe",
             "last_name": "Perez",
             "birth_date": "2000-12-12",
-            "email": "example@example.com"
+            "email": "example@example.com",
+            "password": "password123"
         }
     )
     customer_id = response_customer.json()["id"]

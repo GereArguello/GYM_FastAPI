@@ -8,10 +8,12 @@ from alembic import context
 from app.core.database import engine
 from sqlmodel import SQLModel
 
+from app.auth.models import User
 from app.customers.models import Customer
 from app.memberships.models import Membership
 from app.attendances.models import Attendance
 from app.shop.models import Product
+
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

@@ -10,27 +10,21 @@ from app.customers.models import Customer
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
-async def get_current_user(
-    token: str = Depends(oauth2_scheme),
-    session: Session = Depends(get_session)
-) -> User:
+async def get_current_user(token: str = Depends(oauth2_scheme),session: Session = Depends(get_session)) -> User:
     payload = decode_token(token)
     user_id = payload.get("sub")
 
     if not user_id:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail="Token inválido")
     
-    user = session.get(User, user_id)
+    user = session.get(User, int(user_id))
 
     if not user or not user.is_active:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail="Credenciales inválidas")
 
     return user
 
-def get_current_customer(
-    user: User = Depends(get_current_user),
-    session: Session = Depends(get_session)
-) -> Customer:
+def get_current_customer(user: User = Depends(get_current_user), session: Session = Depends(get_session)) -> Customer:
     if user.role != RoleEnum.CUSTOMER:
         raise HTTPException(status.HTTP_403_FORBIDDEN,detail="Solo customers")
 

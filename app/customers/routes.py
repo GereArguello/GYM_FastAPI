@@ -1,4 +1,4 @@
-from fastapi import APIRouter, status, HTTPException
+from fastapi import APIRouter, status, HTTPException, Depends
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 from datetime import date
@@ -7,6 +7,8 @@ from app.core.enums import StatusEnum
 from app.customers.models import Customer, CustomerMembership
 from app.customers.schemas import CustomerCreate, CustomerRead, CustomerUpdate, CustomerMembershipRead
 from app.memberships.models import Membership
+from app.customers.services import register_customer
+from app.auth.dependencies import get_current_customer
 
 router = APIRouter(
     prefix="/customers",
@@ -18,13 +20,9 @@ router = APIRouter(
             response_model=CustomerRead,
             status_code=status.HTTP_201_CREATED
 )
-def create_customer(customer_data: CustomerCreate,session: SessionDep):
-    customer = Customer(**customer_data.model_dump())
-
+def register_customer_endpoint(customer_data: CustomerCreate,session: SessionDep):
     try:
-        session.add(customer)
-        session.commit()
-        session.refresh(customer)
+        customer = register_customer(session, customer_data)
         return customer
 
     except IntegrityError:
@@ -33,6 +31,12 @@ def create_customer(customer_data: CustomerCreate,session: SessionDep):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="El email ya está siendo utilizado"
         )
+    
+@router.get("/me", response_model=CustomerRead)
+def read_me(current_customer: Customer = Depends(get_current_customer)):
+
+    return current_customer
+
 
 @router.get("/", response_model=list[CustomerRead])
 def list_customers(
@@ -63,6 +67,7 @@ def read_customer(customer_id: int, session: SessionDep):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                             detail="Cliente no encontrado")
     return customer
+
 
 @router.patch("/{customer_id}", response_model=CustomerRead, status_code=status.HTTP_200_OK)
 def update_customer(customer_id: int, customer_data: CustomerUpdate, session: SessionDep):
