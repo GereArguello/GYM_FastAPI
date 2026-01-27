@@ -8,7 +8,8 @@ from app.customers.models import Customer, CustomerMembership
 from app.customers.schemas import CustomerCreate, CustomerRead, CustomerUpdate, CustomerMembershipRead
 from app.memberships.models import Membership
 from app.customers.services import register_customer
-from app.auth.dependencies import get_current_customer
+from app.auth.dependencies import get_current_customer, check_admin
+from app.auth.models import User
 
 router = APIRouter(
     prefix="/customers",
@@ -42,13 +43,12 @@ def read_me(current_customer: Customer = Depends(get_current_customer)):
 def list_customers(
     session: SessionDep,
     include_inactive: bool = False, 
-    search: str | None = None
+    search: str | None = None,
+    admin: User = Depends(check_admin) #Solo administradores
 ):
     
     query = select(Customer)
 
-    #--- A futuro los no activos solo serán visibles para el staff ---#
-    
     if not include_inactive:
         query = query.where(Customer.is_active == StatusEnum.ACTIVE)
 
@@ -61,7 +61,10 @@ def list_customers(
     return session.exec(query).all()
 
 @router.get("/{customer_id}", response_model=CustomerRead)
-def read_customer(customer_id: int, session: SessionDep):    
+def read_customer(customer_id: int,
+                  session: SessionDep,
+                  admin: User = Depends(check_admin)
+):    
     customer = session.get(Customer, customer_id)
     if not customer or not customer.is_active:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
@@ -69,39 +72,26 @@ def read_customer(customer_id: int, session: SessionDep):
     return customer
 
 
-@router.patch("/{customer_id}", response_model=CustomerRead, status_code=status.HTTP_200_OK)
-def update_customer(customer_id: int, customer_data: CustomerUpdate, session: SessionDep):
-    customer = session.get(Customer, customer_id)
+@router.patch("/me", response_model=CustomerRead, status_code=status.HTTP_200_OK)
+def update_customer(customer_data: CustomerUpdate,
+                    session: SessionDep,
+                    current_customer: Customer = Depends(get_current_customer)):
 
-    if not customer or not customer.is_active:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, 
-                            detail="Cliente no encontrado")
-    
     update_data = customer_data.model_dump(exclude_unset=True)
 
-    customer.sqlmodel_update(update_data)
-    try:
-        session.commit()
-        session.refresh(customer)
-    except IntegrityError:
-        session.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="El email ya está siendo utilizado"
-        )
+    current_customer.sqlmodel_update(update_data)
 
-    return customer
-
-@router.delete("/{customer_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_customer(customer_id: int, session: SessionDep):
-    customer = session.get(Customer, customer_id)
-
-    if not customer:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, 
-                            detail="Cliente no encontrado")
-    
-    session.delete(customer)
     session.commit()
+    session.refresh(current_customer)
+
+    return current_customer
+
+@router.delete("/me/deactivate", status_code=status.HTTP_204_NO_CONTENT)
+def deactivate_customer_me(session: SessionDep,
+                    current_customer: Customer = Depends(get_current_customer)):
+    current_customer.is_active = StatusEnum.INACTIVE
+    session.commit()
+
 
 @router.post("/{customer_id}/membership/{membership_id}",
              response_model=CustomerMembershipRead,

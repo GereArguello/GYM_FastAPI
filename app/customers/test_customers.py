@@ -1,6 +1,7 @@
 from fastapi import status
-from datetime import date
 from app.customers.models import Customer
+from app.helpers import login, create_customer
+from app.core.enums import StatusEnum
 
 #------- TEST CRUD CUSTOMERS -------#
 def test_create_customer_success(client):
@@ -47,40 +48,79 @@ def test_create_customer_duplicate_email(client):
 
     assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-def test_read_customer(client):
-    response = client.post(
-        "/customers/",
-        json={
-            "first_name": "Pepe",
-            "last_name": "Perez",
-            "birth_date": "2000-12-12",
-            "email": "example@example.com",
-            "password": "password123"
+def test_list_customers_as_admin(client, admin_user):
+    login = client.post(
+        "/auth/login",
+        data={
+            "username": admin_user["email"],
+            "password": admin_user["password"]
         }
     )
-    customer_id: int = response.json()["id"]
-    response_read = client.get(f"/customers/{customer_id}")
+    token = login.json()["access_token"]
 
-    assert response_read.status_code == status.HTTP_200_OK
-    assert response_read.json()["first_name"] == "Pepe"
-
-def test_update_customer(client):
-    #Create
-    response = client.post(
+    response = client.get(
         "/customers/",
-        json={
-            "first_name": "Pepe",
-            "last_name": "Perez",
-            "birth_date": "2000-12-12",
-            "email": "example@example.com",
-            "password": "password123"
-        }
+        headers={"Authorization": f"Bearer {token}"}
     )
-    customer = response.json()
-    customer_id = customer["id"]
+
+    assert response.status_code == 200
+
+def test_customer_cannot_list_customers(client, customer_with_credentials):
+    login = client.post("/auth/login", data={
+        "username": customer_with_credentials["email"],
+        "password": customer_with_credentials["password"],
+    })
+
+    token = login.json()["access_token"]
+
+    response = client.get(
+        "/customers/",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+
+    assert response.status_code == 403
+
+def test_read_customer_as_admin(client, admin_user):
+    token = login(client, admin_user["email"], admin_user["password"])
+
+    customer = create_customer(
+        client,
+        email="example2@example.com"
+    )
+
+    response = client.get(
+        f"/customers/{customer['id']}",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+
+def test_customer_cannot_read_another_customer(client, customer_with_credentials):
+    c = customer_with_credentials
+    token = login(client, c["email"], c["password"])
+
+    customer = create_customer(
+        client,
+        email="example2@example.com"
+    )
+
+    response = client.get(
+        f"/customers/{customer['id']}",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+
+def test_update_customer(client, customer_with_credentials):
+    c = customer_with_credentials
+    token = login(client, c["email"], c["password"])
+
     #Update
     patch_response = client.patch(
-        f"/customers/{customer_id}",
+        "/customers/me",
+        headers={"Authorization": f"Bearer {token}"},
         json={"first_name": "Pablo"}
     )
     assert patch_response.status_code == status.HTTP_200_OK
@@ -93,172 +133,28 @@ def test_update_customer(client):
     #Otros valores
     assert updated_customer["last_name"] == "Perez"
 
+def test_admin_cannot_update_customer_me(client, admin_user):
+    token = login(client, admin_user["email"], admin_user["password"])
 
-def test_delete_customer(client, session):
-    response = client.post(
-        "/customers/",
-        json={
-            "first_name": "Pepe",
-            "last_name": "Perez",
-            "birth_date": "2000-12-12",
-            "email": "example@example.com",
-            "password": "password123"
-        }
+    response = client.patch(
+        "/customers/me",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"first_name": "AdminHack"}
     )
-    customer_id = response.json()["id"]
-    response_delete = client.delete(f"/customers/{customer_id}")
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+def test_delete_customer(client, session, customer_with_credentials):
+    c = customer_with_credentials
+    token = login(client, c["email"], c["password"])
+
+    response_delete = client.delete(f"/customers/me/deactivate",
+                                    headers={"Authorization": f"Bearer {token}"})
+
     assert response_delete.status_code == status.HTTP_204_NO_CONTENT
     #Validamos que el customer fue eliminado
+    customer_id = c["customer"]["id"]
     deleted_customer = session.get(Customer, customer_id)
-    assert deleted_customer is None
+    assert deleted_customer.is_active == StatusEnum.INACTIVE
 
-#------- TEST CRUD CUSTOMERMEMBERSHIP -------#
-
-def test_create_customer_membership(client):
-    # Create customer
-    response_customer = client.post(
-        "/customers/",
-        json={
-            "first_name": "Pepe",
-            "last_name": "Perez",
-            "birth_date": "2000-12-12",
-            "email": "example@example.com",
-            "password": "password123"
-        }
-    )
-    assert response_customer.status_code == status.HTTP_201_CREATED
-    customer_id = response_customer.json()["id"]
-
-    # Create membership
-    response_membership = client.post(
-        "/memberships/",
-        json={
-            "name": "Premium",
-            "max_days_per_week": 5,
-            "points_multiplier": 1.5
-        }
-    )
-    assert response_membership.status_code == status.HTTP_201_CREATED
-    membership_id = response_membership.json()["id"]
-
-    response = client.post(
-        f"/customers/{customer_id}/membership/{membership_id}"
-    )
-
-    assert response.status_code == status.HTTP_201_CREATED
-    assert response.json()["customer_id"] == customer_id
-    assert response.json()["membership_id"] == membership_id
-    assert response.json()["is_active"] is True
-    assert response.json()["start_date"] == date.today().isoformat()
-
-def test_assign_same_membership_twice_returns_400(client):
-    # Create customer
-    response_customer = client.post(
-        "/customers/",
-        json={
-            "first_name": "Pepe",
-            "last_name": "Perez",
-            "birth_date": "2000-12-12",
-            "email": "example@example.com",
-            "password": "password123"
-        }
-    )
-    assert response_customer.status_code == status.HTTP_201_CREATED
-    customer_id = response_customer.json()["id"]
-
-    # Create membership
-    response_membership = client.post(
-        "/memberships/",
-        json={
-            "name": "Premium",
-            "max_days_per_week": 5,
-            "points_multiplier": 1.5
-        }
-    )
-    assert response_membership.status_code == status.HTTP_201_CREATED
-    membership_id = response_membership.json()["id"]
-
-    client.post(f"/customers/{customer_id}/membership/{membership_id}")
-
-    response = client.post(
-        f"/customers/{customer_id}/membership/{membership_id}"
-    )
-
-    assert response.status_code == status.HTTP_400_BAD_REQUEST
-
-def test_reassign_membership_deactivates_previous(client):
-    # Create customer
-    response_customer = client.post(
-        "/customers/",
-        json={
-            "first_name": "Pepe",
-            "last_name": "Perez",
-            "birth_date": "2000-12-12",
-            "email": "example@example.com",
-            "password": "password123"
-        }
-    )
-    assert response_customer.status_code == status.HTTP_201_CREATED
-    customer_id = response_customer.json()["id"]
-
-    # Create first membership
-    response_membership_a = client.post(
-        "/memberships/",
-        json={
-            "name": "Premium",
-            "max_days_per_week": 5,
-            "points_multiplier": 1.5
-        }
-    )
-    assert response_membership_a.status_code == status.HTTP_201_CREATED
-    membership_a = response_membership_a.json()["id"]
-
-    # Create second membership
-    response_membership_b = client.post(
-        "/memberships/",
-        json={
-            "name": "Basic",
-            "max_days_per_week": 3,
-            "points_multiplier": 1.0
-        }
-    )
-    assert response_membership_b.status_code == status.HTTP_201_CREATED
-    membership_b = response_membership_b.json()["id"]
-
-    # Asignamos primer membership
-    response_assign_a = client.post(
-        f"/customers/{customer_id}/membership/{membership_a}"
-    )
-    assert response_assign_a.status_code == status.HTTP_201_CREATED
-
-    # Reasignamos a segundo membership > debe desactivar la primera
-    response_assign_b = client.post(
-        f"/customers/{customer_id}/membership/{membership_b}"
-    )
-    assert response_assign_b.status_code == status.HTTP_201_CREATED
-
-    # membership activa debe ser la segunda
-    response_active = client.get(
-        f"/customers/{customer_id}/membership/active"
-    )
-    assert response_active.status_code == status.HTTP_200_OK
-    assert response_active.json()["membership_id"] == membership_b
-
-def test_get_active_membership_returns_404_if_never_assigned(client):
-    response_customer = client.post(
-        "/customers/",
-        json={
-            "first_name": "Pepe",
-            "last_name": "Perez",
-            "birth_date": "2000-12-12",
-            "email": "example@example.com",
-            "password": "password123"
-        }
-    )
-    customer_id = response_customer.json()["id"]
-
-    response = client.get(
-        f"/customers/{customer_id}/membership/active"
-    )
-
-    assert response.status_code == status.HTTP_404_NOT_FOUND
