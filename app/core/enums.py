@@ -12,3 +12,8 @@ class ProductType(str, Enum):
 class RoleEnum(str, Enum):
     ADMIN = "admin"
     CUSTOMER = "customer"
+
+class MembershipStatusEnum(str, Enum):
+    ACTIVE = "active"
+    PENDING = "pending"
+    INACTIVE = "inactive"

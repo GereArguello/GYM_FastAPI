@@ -1,4 +1,5 @@
 from sqlmodel import Session
+from datetime import datetime, timedelta
 from app.customers.schemas import CustomerCreate
 from app.customers.models import Customer
 from app.auth.models import User
@@ -29,3 +30,16 @@ def register_customer(session: Session, data: CustomerCreate) -> Customer:
     session.refresh(customer)
 
     return customer
+
+
+def obtener_ultimo_dia(fecha: datetime):
+    # 1. Ir al primer día del mes siguiente
+    if fecha.month == 12:
+        primer_dia_siguiente = datetime(fecha.year + 1, 1, 1)
+    else:
+        primer_dia_siguiente = datetime(fecha.year, fecha.month + 1, 1)
+    
+    # 2. Restar un día
+    ultimo_dia = primer_dia_siguiente - timedelta(days=1)
+
+    return ultimo_dia.date(), primer_dia_siguiente.date()

@@ -49,14 +49,7 @@ def test_create_customer_duplicate_email(client):
     assert response.status_code == status.HTTP_400_BAD_REQUEST
 
 def test_list_customers_as_admin(client, admin_user):
-    login = client.post(
-        "/auth/login",
-        data={
-            "username": admin_user["email"],
-            "password": admin_user["password"]
-        }
-    )
-    token = login.json()["access_token"]
+    token = login(client, admin_user["email"], admin_user["password"])
 
     response = client.get(
         "/customers/",
@@ -66,12 +59,8 @@ def test_list_customers_as_admin(client, admin_user):
     assert response.status_code == 200
 
 def test_customer_cannot_list_customers(client, customer_with_credentials):
-    login = client.post("/auth/login", data={
-        "username": customer_with_credentials["email"],
-        "password": customer_with_credentials["password"],
-    })
-
-    token = login.json()["access_token"]
+    c = customer_with_credentials
+    token = login(client, c["email"], c["password"])
 
     response = client.get(
         "/customers/",

@@ -1,7 +1,7 @@
 from datetime import date
 from typing import Optional, TYPE_CHECKING
 from sqlmodel import SQLModel, Field, Relationship
-from app.core.enums import StatusEnum
+from app.core.enums import StatusEnum, MembershipStatusEnum
 
 # SOLO PARA IDE, EVITA IMPORTS CIRCULARES
 if TYPE_CHECKING:
@@ -39,9 +39,10 @@ class CustomerMembership(SQLModel, table=True):
     customer_id: int = Field(foreign_key="customer.id")
     membership_id: int = Field(foreign_key="membership.id")
 
-    start_date: date = Field(default_factory=date.today)
-    end_date: Optional[date] = None
-    is_active: bool = Field(default=True)
+    status: MembershipStatusEnum = Field(default=MembershipStatusEnum.ACTIVE)
+
+    start_date: date
+    end_date: Optional[date] = Field(default=None)
 
     customer: "Customer" = Relationship(back_populates="memberships")
     membership: "Membership" = Relationship(back_populates="customer_memberships")

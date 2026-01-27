@@ -3,11 +3,11 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 from datetime import date
 from app.core.database import SessionDep
-from app.core.enums import StatusEnum
+from app.core.enums import StatusEnum, MembershipStatusEnum
 from app.customers.models import Customer, CustomerMembership
 from app.customers.schemas import CustomerCreate, CustomerRead, CustomerUpdate, CustomerMembershipRead
 from app.memberships.models import Membership
-from app.customers.services import register_customer
+from app.customers.services import register_customer, obtener_ultimo_dia
 from app.auth.dependencies import get_current_customer, check_admin
 from app.auth.models import User
 
@@ -60,17 +60,6 @@ def list_customers(
     
     return session.exec(query).all()
 
-@router.get("/{customer_id}", response_model=CustomerRead)
-def read_customer(customer_id: int,
-                  session: SessionDep,
-                  admin: User = Depends(check_admin)
-):    
-    customer = session.get(Customer, customer_id)
-    if not customer or not customer.is_active:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                            detail="Cliente no encontrado")
-    return customer
-
 
 @router.patch("/me", response_model=CustomerRead, status_code=status.HTTP_200_OK)
 def update_customer(customer_data: CustomerUpdate,
@@ -92,29 +81,30 @@ def deactivate_customer_me(session: SessionDep,
     current_customer.is_active = StatusEnum.INACTIVE
     session.commit()
 
+#---------ENDPOINTS PARA RELACIONAR CUSTOMERS Y MEMBERSHIPS----------#
 
-@router.post("/{customer_id}/membership/{membership_id}",
+
+@router.post("/assign-membership/{membership_id}",
              response_model=CustomerMembershipRead,
              status_code=status.HTTP_201_CREATED)
 def assign_membership(
-    customer_id: int,
     membership_id: int,
-    session: SessionDep
+    session: SessionDep,
+    current_customer: Customer = Depends(get_current_customer)
 ):
-    customer = session.get(Customer, customer_id)
-    if not customer:
-        raise HTTPException(status_code=404, detail="Customer no encontrado")
+    customer_id = current_customer.id
 
     membership = session.get(Membership, membership_id)
     if not membership:
         raise HTTPException(status_code=404, detail="Membership no encontrada")
 
-    # Desactivar membership activa previa (si existe)
+
+    # Encontrar membresía activa
     active_membership = session.exec(
         select(CustomerMembership)
         .where(
             CustomerMembership.customer_id == customer_id,
-            CustomerMembership.is_active == True
+            CustomerMembership.status == MembershipStatusEnum.ACTIVE
         )
     ).first()
 
@@ -124,58 +114,103 @@ def assign_membership(
             status_code=400,
             detail="El cliente ya posee esta membresía activa"
         )
+    
+    ultimo_dia, primer_dia_siguiente = obtener_ultimo_dia(date.today())
 
-    # Desactivar membresía actual
+    # Programar fin de membresía
     if active_membership:
-        active_membership.is_active = False
-        active_membership.end_date = date.today()
+        active_membership.end_date = ultimo_dia
 
-    # Crear nueva membresía
-    customer_membership = CustomerMembership(
-        customer_id=customer_id,
-        membership_id=membership_id
-    )
+        # Programar comienzo de membresía
+        customer_membership = CustomerMembership(
+            customer_id=customer_id,
+            membership_id=membership_id,
+            start_date=primer_dia_siguiente,
+            status=MembershipStatusEnum.PENDING
+        )
 
-    session.add(customer_membership)
-    session.commit()
-    session.refresh(customer_membership)
+    else:
+        customer_membership = CustomerMembership(
+            customer_id=customer_id,
+            membership_id=membership_id,
+            start_date=date.today(),
+            end_date=primer_dia_siguiente,
+            status=MembershipStatusEnum.ACTIVE
+        )
+    try:
+        session.add(customer_membership)
+        session.commit()
+        session.refresh(customer_membership)
+    except Exception:
+        session.rollback()
+        raise
 
     return customer_membership
 
-@router.get("/memberships", response_model=list[CustomerMembershipRead])
+# EL SIGUIENTEEEE
+
+@router.get("/customer-memberships", response_model=list[CustomerMembershipRead])
 def list_customer_memberships(
     session: SessionDep,
-    include_inactive: bool=False 
+    include_inactive: bool=False,
+    admin: User = Depends(check_admin)
 ):
     query = select(CustomerMembership)
 
     if not include_inactive:
-        query = query.where(CustomerMembership.is_active == True)
+        query = query.where(CustomerMembership.status == MembershipStatusEnum.ACTIVE)
     
     return session.exec(query).all()
 
-@router.get("/{customer_id}/membership/active", response_model=CustomerMembershipRead)
-def get_active_membership(
+@router.get("/me/membership", response_model=CustomerMembershipRead)
+def read_my_membership(session: SessionDep, 
+                       current_customer: Customer = Depends(get_current_customer),
+                       status: MembershipStatusEnum = MembershipStatusEnum.ACTIVE):
+    
+    membership = session.exec(select(CustomerMembership)
+                         .where(CustomerMembership.customer_id == current_customer.id,
+                                CustomerMembership.status == status)).first()
+    if not membership:
+        raise HTTPException(404,f"El customer no posee una membresía {status.value}")
+    
+    return membership
+
+@router.get("/{customer_id}/membership",response_model=CustomerMembershipRead)
+def get_customer_membership(
     customer_id: int,
-    session: SessionDep
+    session: SessionDep,
+    status: MembershipStatusEnum = MembershipStatusEnum.ACTIVE,
+    admin: User = Depends(check_admin)
 ):
-    # Validar customer
     customer = session.get(Customer, customer_id)
     if not customer:
-        raise HTTPException(status_code=404, detail="Customer no encontrado")
+        raise HTTPException(404, "Customer no encontrado")
 
-    active_membership = session.exec(
+    membership = session.exec(
         select(CustomerMembership)
         .where(
             CustomerMembership.customer_id == customer_id,
-            CustomerMembership.is_active == True
+            CustomerMembership.status == status
         )
     ).first()
 
-    if not active_membership:
-        raise HTTPException(
-            status_code=404,
-            detail="El customer no posee una membresía activa"
-        )
+    if not membership:
+        raise HTTPException(404,f"El customer no posee una membresía {status.value}")
 
-    return active_membership
+    return membership
+
+
+#rutas dinámicas van despúes
+@router.get("/{customer_id}", response_model=CustomerRead)
+def read_customer(customer_id: int,
+                  session: SessionDep,
+                  admin: User = Depends(check_admin)
+):    
+    customer = session.get(Customer, customer_id)
+    if not customer or not customer.is_active:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail="Cliente no encontrado")
+    return customer
+
+    
+

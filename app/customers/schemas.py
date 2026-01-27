@@ -2,7 +2,7 @@ from sqlmodel import SQLModel
 from typing import Optional
 from pydantic import EmailStr
 from datetime import date
-from app.core.enums import StatusEnum
+from app.core.enums import StatusEnum, MembershipStatusEnum
 
 
 class CustomerCreate(SQLModel):
@@ -37,6 +37,9 @@ class CustomerMembershipRead(SQLModel):
     customer_id: int 
     membership_id: int 
 
+    status: MembershipStatusEnum
+
     start_date: date 
     end_date: Optional[date]
-    is_active: bool 
+
+
