@@ -1,3 +1,4 @@
+from fastapi import status
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -8,6 +9,7 @@ from app.core.database import get_session
 from app.core.security import get_password_hash
 from app.core.enums import RoleEnum
 from app.auth.models import User
+from app.helpers import login
 
 
 
@@ -73,3 +75,41 @@ def customer_with_credentials(client):
         "email": payload["email"],
         "password": payload["password"],
     }
+
+@pytest.fixture(name="membership")
+def membership(client, admin_user):
+    login = client.post(
+        "/auth/login",
+        data={
+            "username": admin_user["email"],
+            "password": admin_user["password"],
+        }
+    )
+    token = login.json()["access_token"]
+
+    response = client.post(
+        "/memberships/",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "name": "Premium",
+            "max_days_per_week": 5,
+            "points_multiplier": 1.5
+        }
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+    return response.json()
+
+@pytest.fixture(name="customer_with_membership")
+def customer_with_membership(client, customer_with_credentials, membership):
+    c = customer_with_credentials
+    token = login(client, c["email"], c["password"])
+
+    membership_id = membership["id"]
+
+    response = client.post(
+        f"/customers/assign-membership/{membership_id}",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+
+    assert response.status_code == status.HTTP_201_CREATED
+    return c

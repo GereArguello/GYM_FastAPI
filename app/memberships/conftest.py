@@ -1,28 +1,6 @@
-from fastapi import status
+
 import pytest
 
-@pytest.fixture(name="membership")
-def membership(client, admin_user):
-    login = client.post(
-        "/auth/login",
-        data={
-            "username": admin_user["email"],
-            "password": admin_user["password"],
-        }
-    )
-    token = login.json()["access_token"]
-
-    response = client.post(
-        "/memberships/",
-        headers={"Authorization": f"Bearer {token}"},
-        json={
-            "name": "Premium",
-            "max_days_per_week": 5,
-            "points_multiplier": 1.5
-        }
-    )
-    assert response.status_code == status.HTTP_201_CREATED
-    return response.json()
 
 @pytest.fixture(name="membership_inactive")
 def membership_inactive(client, admin_user):

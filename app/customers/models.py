@@ -28,7 +28,7 @@ class Customer(SQLModel, table=True):
     @property
     def active_membership(self) -> Optional["CustomerMembership"]:
         return next(
-            (cm for cm in self.memberships if cm.is_active),
+            (cm for cm in self.memberships if cm.status == MembershipStatusEnum.ACTIVE),
             None)
 
 

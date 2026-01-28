@@ -2,10 +2,6 @@ from sqlmodel import SQLModel
 from typing import Optional
 from datetime import datetime
 
-
-class AttendanceCreate(SQLModel):
-    customer_id : int 
-
     
 
 class AttendanceRead(SQLModel):

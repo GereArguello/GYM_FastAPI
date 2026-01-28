@@ -1,5 +1,5 @@
-from sqlmodel import select
-from datetime import datetime, timedelta, timezone
+from sqlmodel import select, Session
+from datetime import date, datetime, timedelta, timezone
 from app.attendances.models import Attendance
 from app.customers.models import Customer
 
@@ -51,3 +51,16 @@ def get_weekly_attendance_count(
             )
         ).all()
     )
+
+def get_open_attendance_today(session: Session, customer_id: int) -> Attendance | None:
+    today = date.today()
+
+    return session.exec(
+        select(Attendance)
+        .where(
+            Attendance.customer_id == customer_id,
+            Attendance.check_in >= datetime.combine(today, datetime.min.time(), tzinfo=timezone.utc),
+            Attendance.check_in <= datetime.combine(today, datetime.max.time(), tzinfo=timezone.utc),
+            Attendance.check_out == None
+        )
+    ).first()

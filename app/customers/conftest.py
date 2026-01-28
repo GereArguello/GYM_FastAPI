@@ -44,20 +44,6 @@ def membership_2(client, admin_user):
     assert response.status_code == status.HTTP_201_CREATED
     return response.json()
 
-@pytest.fixture(name="customer_with_membership")
-def customer_with_membership(client, customer_with_credentials, membership):
-    c = customer_with_credentials
-    token = login(client, c["email"], c["password"])
-
-    membership_id = membership["id"]
-
-    response = client.post(
-        f"/customers/assign-membership/{membership_id}",
-        headers={"Authorization": f"Bearer {token}"}
-    )
-
-    assert response.status_code == status.HTTP_201_CREATED
-    return c
 
 @pytest.fixture(name="customer_with_pending_membership")
 def customer_with_pending_membership(
@@ -100,14 +86,7 @@ def customer_with_pending_membership(
 
 
 ####
-@pytest.fixture(name="attendance")
-def attendance(client, customer_with_membership):
-    response = client.post(
-        "/attendances/",
-        json={"customer_id": customer_with_membership["id"]}
-    )
-    assert response.status_code == status.HTTP_201_CREATED
-    return response.json()
+
 
 @pytest.fixture(name="checkout_attendance")
 def checkout_attendance(client, attendance):
