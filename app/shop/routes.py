@@ -1,15 +1,21 @@
-from fastapi import APIRouter, status, HTTPException
+from fastapi import APIRouter, status, HTTPException, Depends
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 from app.core.database import SessionDep
+from app.core.enums import RoleEnum
 from app.shop.models import Product
 from app.shop.schemas import ProductRead, ProductCreate, ProductUpdate
+from app.auth.models import User
+from app.auth.dependencies import check_admin, get_current_user_optional
+
 
 router = APIRouter(prefix="/shop",
                    tags=["shop"])
 
 @router.post("/", response_model=ProductRead, status_code=status.HTTP_201_CREATED)
-def create_product(product_data: ProductCreate, session: SessionDep):
+def create_product(product_data: ProductCreate,
+                   session: SessionDep,
+                   admin: User = Depends(check_admin)):
     product = Product(**product_data.model_dump())
 
     if product_data.price < 0: 
@@ -35,28 +41,46 @@ def create_product(product_data: ProductCreate, session: SessionDep):
         )
 
 @router.get("/", response_model=list[ProductRead], status_code=status.HTTP_200_OK)
-def list_products(session: SessionDep, include_inactive: bool = False):
+def list_products(session: SessionDep,
+                include_inactive: bool = False,
+                current_user: User | None = Depends(get_current_user_optional)):
     query = select(Product)
 
-    if not include_inactive:
+    # Solo admin puede ver inactivos explícitamente
+    if not (current_user and current_user.role == RoleEnum.ADMIN and include_inactive):
         query= query.where(Product.is_active == True)
 
     return session.exec(query).all()
 
 @router.get("/{product_id}", response_model=ProductRead, status_code=status.HTTP_200_OK)
-def read_product(product_id: int, session: SessionDep):
+def read_product(product_id: int,
+                session: SessionDep,
+                current_user: User | None = Depends(get_current_user_optional)):
+    
     product = session.get(Product, product_id)
 
     if not product:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                             detail="Producto no encontrado")
+    
+    # Bloqueo de productos inactivos
+    if (
+        not product.is_active and
+        not (current_user and current_user.role == RoleEnum.ADMIN)
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Producto no encontrado"
+        )
+
     return product
     
 @router.patch("/{product_id}", response_model=ProductRead, status_code=status.HTTP_200_OK)
 def update_product(
     product_id: int,
     product_data: ProductUpdate,
-    session: SessionDep
+    session: SessionDep,
+    admin: User = Depends(check_admin)
 ):
     product = session.get(Product, product_id)
 
@@ -103,7 +127,9 @@ def update_product(
         )
     
 @router.patch("/{product_id}/activate", response_model=ProductRead, status_code=status.HTTP_200_OK)
-def activate_product(product_id: int,session: SessionDep):
+def activate_product(product_id: int,
+                     session: SessionDep,
+                     admin: User = Depends(check_admin)):
     product = session.get(Product, product_id)
 
     if not product:
@@ -118,7 +144,9 @@ def activate_product(product_id: int,session: SessionDep):
     return product
     
 @router.delete("/{product_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_product(product_id: int, session: SessionDep):
+def delete_product(product_id: int,
+                   session: SessionDep,
+                   admin: User = Depends(check_admin)):
     product = session.get(Product, product_id)
 
     if not product:

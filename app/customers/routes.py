@@ -147,7 +147,7 @@ def assign_membership(
 
     return customer_membership
 
-# EL SIGUIENTEEEE
+
 
 @router.get("/customer-memberships", response_model=list[CustomerMembershipRead])
 def list_customer_memberships(
