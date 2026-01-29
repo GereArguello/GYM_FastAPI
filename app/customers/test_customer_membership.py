@@ -129,3 +129,30 @@ def test_read_customer_membership_should_return_404(client, customer_with_member
                           headers={"Authorization": f"Bearer {token}"})
     
     assert response.status_code == status.HTTP_404_NOT_FOUND
+
+def test_list_customer_membership_paginated(
+    client,
+    admin_user,
+    customer_with_membership
+):
+    token = login(client, admin_user["email"], admin_user["password"])
+
+    response = client.get(
+        "/customers/customer-memberships?page=1&size=1",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+
+    body = response.json()
+
+    # estructura de paginación
+    assert "items" in body
+    assert "total" in body
+    assert "page" in body
+    assert "size" in body
+
+    # comportamiento esperado
+    assert body["page"] == 1
+    assert body["size"] == 1
+    assert len(body["items"]) <= 1

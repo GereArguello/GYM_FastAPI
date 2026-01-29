@@ -176,3 +176,52 @@ def test_read_attendance_not_found(client, admin_user):
                         headers={"Authorization": f"Bearer {token}"})
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
+
+def test_list_attendances_paginated_admin(
+    client,
+    admin_user,
+    attendance
+):
+    token = login(client, admin_user["email"], admin_user["password"])
+
+    response = client.get(
+        "/attendances?page=1&size=1",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+
+    body = response.json()
+    assert "items" in body
+    assert "total" in body
+    assert "page" in body
+    assert "size" in body
+
+    assert body["page"] == 1
+    assert body["size"] == 1
+    assert len(body["items"]) <= 1
+
+def test_list_my_attendances_paginated_customer(
+    client,
+    customer_with_credentials,
+    attendance
+):
+    c = customer_with_credentials
+    token = login(client, c["email"], c["password"])
+
+    response = client.get(
+        "/attendances/me?page=1&size=1",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+
+    body = response.json()
+    assert "items" in body
+    assert "total" in body
+    assert "page" in body
+    assert "size" in body
+
+    assert body["page"] == 1
+    assert body["size"] == 1
+    assert len(body["items"]) <= 1

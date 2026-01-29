@@ -165,3 +165,26 @@ def test_list_products_does_not_include_inactive_for_public(
 
     ids = [p["id"] for p in response.json()]
     assert product["id"] not in ids
+
+def test_list_products_paginated(client, admin_user, product):
+    token = login(client, admin_user["email"], admin_user["password"])
+
+    response = client.get(
+        "/shop?page=1&size=5",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+
+    body = response.json()
+
+    # estructura de paginación
+    assert "items" in body
+    assert "total" in body
+    assert "page" in body
+    assert "size" in body
+
+    # comportamiento esperado
+    assert body["page"] == 1
+    assert body["size"] == 5
+    assert isinstance(body["items"], list)

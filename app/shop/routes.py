@@ -1,8 +1,11 @@
 from fastapi import APIRouter, status, HTTPException, Depends
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
+from fastapi_pagination import Page
+from fastapi_pagination.ext.sqlmodel import paginate
 from app.core.database import SessionDep
 from app.core.enums import RoleEnum
+from app.core.pagination import ProductPagination
 from app.shop.models import Product
 from app.shop.schemas import ProductRead, ProductCreate, ProductUpdate
 from app.auth.models import User
@@ -40,17 +43,20 @@ def create_product(product_data: ProductCreate,
             detail="Ya existe un producto con ese nombre"
         )
 
-@router.get("/", response_model=list[ProductRead], status_code=status.HTTP_200_OK)
+@router.get("/", response_model=Page[ProductRead], status_code=status.HTTP_200_OK)
 def list_products(session: SessionDep,
                 include_inactive: bool = False,
-                current_user: User | None = Depends(get_current_user_optional)):
+                current_user: User | None = Depends(get_current_user_optional),
+                params: ProductPagination = Depends()):
     query = select(Product)
 
     # Solo admin puede ver inactivos explícitamente
     if not (current_user and current_user.role == RoleEnum.ADMIN and include_inactive):
         query= query.where(Product.is_active == True)
 
-    return session.exec(query).all()
+    query = query.order_by(Product.price, Product.id)
+
+    return paginate(session, query, params)
 
 @router.get("/{product_id}", response_model=ProductRead, status_code=status.HTTP_200_OK)
 def read_product(product_id: int,

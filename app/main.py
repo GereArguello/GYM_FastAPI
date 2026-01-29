@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi_pagination import add_pagination
 from app.customers import routes as customers_router
 from app.memberships import routes as memberships_router
 from app.attendances import routes as attendances_router
@@ -8,6 +9,9 @@ from app.auth import routes as auth_router
 import app.models
 
 app = FastAPI()
+
+add_pagination(app)
+
 
 app.include_router(customers_router.router)
 app.include_router(memberships_router.router)

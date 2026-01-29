@@ -3,3 +3,4 @@ sqlmodel==0.0.31
 alembic==1.18.1
 bcrypt==5.0.0
 python-jose==3.5.0
+fastapi-pagination==0.15.8

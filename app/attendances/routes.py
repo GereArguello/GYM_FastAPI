@@ -1,5 +1,7 @@
 from fastapi import APIRouter, status, HTTPException, Depends
 from typing import Optional, List
+from fastapi_pagination import Page
+from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import select, desc
 from datetime import datetime, timezone
 from app.attendances.schemas import AttendanceRead
@@ -12,6 +14,7 @@ from app.attendances.services import (finalize_attendance,
                                       get_open_attendance_today)
 from app.core.database import SessionDep
 from app.core.enums import MembershipStatusEnum
+from app.core.pagination import DefaultPagination
 from app.auth.dependencies import get_current_customer, check_admin
 from app.auth.models import User
 
@@ -109,24 +112,27 @@ def checkout_attendance(attendance_id: int,
 
     return attendance
 
-@router.get("/", response_model=List[AttendanceRead], status_code=status.HTTP_200_OK)
+@router.get("/", response_model=Page[AttendanceRead], status_code=status.HTTP_200_OK)
 def list_attendances(session: SessionDep,
                      customer_id : Optional[int] = None,
-                     admin: User = Depends(check_admin)):
-    query = select(Attendance).order_by(desc(Attendance.check_in))
+                     admin: User = Depends(check_admin),
+                     params: DefaultPagination = Depends()):
+    query = select(Attendance)
 
     if customer_id is not None:
         query = query.where(Attendance.customer_id == customer_id)
 
-    return session.exec(query).all()
+    query = query.order_by(desc(Attendance.check_in))
+    return paginate(session, query, params)
 
-@router.get("/me", response_model=list[AttendanceRead], status_code=status.HTTP_200_OK)
+@router.get("/me", response_model=Page[AttendanceRead], status_code=status.HTTP_200_OK)
 def read_me_attendances(session: SessionDep,
-                        current_customer: Customer = Depends(get_current_customer)):
+                        current_customer: Customer = Depends(get_current_customer),
+                        params: DefaultPagination = Depends()):
     
     query = select(Attendance).where(Attendance.customer_id == current_customer.id).order_by(desc(Attendance.check_in))
 
-    return session.exec(query).all()
+    return paginate(session, query, params)
 
 @router.get("/{attendance_id}", response_model=AttendanceRead,status_code=status.HTTP_200_OK)
 def read_attendance(attendance_id: int,

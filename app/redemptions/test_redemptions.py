@@ -165,5 +165,24 @@ def test_read_redemption(client, customer_with_credentials, redemption, cheap_pr
     assert "created_at" in response.json()
     
 
+def test_list_redemptions_paginated(client, admin_user, redemption):
+    token = login(client, admin_user["email"], admin_user["password"])
 
-    
+    response = client.get(
+        "/redemptions?page=1&size=1",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+
+    body = response.json()
+
+    # estructura de paginación
+    assert "items" in body
+    assert "total" in body
+    assert "page" in body
+    assert "size" in body
+
+    # comportamiento esperado
+    assert body["size"] == 1
+    assert len(body["items"]) <= 1

@@ -1,9 +1,12 @@
 from fastapi import APIRouter, status, HTTPException, Depends
+from fastapi_pagination import Page
+from fastapi_pagination.ext.sqlmodel import paginate
 from sqlalchemy.exc import IntegrityError
-from sqlmodel import select
+from sqlmodel import select, desc
 from datetime import date
 from app.core.database import SessionDep
 from app.core.enums import StatusEnum, MembershipStatusEnum
+from app.core.pagination import DefaultPagination
 from app.customers.models import Customer, CustomerMembership
 from app.customers.schemas import CustomerCreate, CustomerRead, CustomerUpdate, CustomerMembershipRead
 from app.memberships.models import Membership
@@ -39,12 +42,13 @@ def read_me(current_customer: Customer = Depends(get_current_customer)):
     return current_customer
 
 
-@router.get("/", response_model=list[CustomerRead])
+@router.get("/", response_model=Page[CustomerRead])
 def list_customers(
     session: SessionDep,
     include_inactive: bool = False, 
     search: str | None = None,
-    admin: User = Depends(check_admin) #Solo administradores
+    admin: User = Depends(check_admin),
+    params: DefaultPagination = Depends()
 ):
     
     query = select(Customer)
@@ -57,8 +61,10 @@ def list_customers(
         (Customer.first_name.ilike(f"%{search}%")) |
         (Customer.last_name.ilike(f"%{search}%"))
     )
+    query = query.order_by(Customer.last_name, Customer.first_name)
+
     
-    return session.exec(query).all()
+    return paginate(session,query,params)
 
 
 @router.patch("/me", response_model=CustomerRead, status_code=status.HTTP_200_OK)
@@ -149,18 +155,20 @@ def assign_membership(
 
 
 
-@router.get("/customer-memberships", response_model=list[CustomerMembershipRead])
+@router.get("/customer-memberships", response_model=Page[CustomerMembershipRead])
 def list_customer_memberships(
     session: SessionDep,
     include_inactive: bool=False,
-    admin: User = Depends(check_admin)
+    admin: User = Depends(check_admin),
+    params: DefaultPagination = Depends()
 ):
     query = select(CustomerMembership)
 
     if not include_inactive:
         query = query.where(CustomerMembership.status == MembershipStatusEnum.ACTIVE)
     
-    return session.exec(query).all()
+    query = query.order_by(desc(CustomerMembership.id))
+    return paginate(session,query,params)
 
 @router.get("/me/membership", response_model=CustomerMembershipRead)
 def read_my_membership(session: SessionDep, 

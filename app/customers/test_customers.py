@@ -147,3 +147,29 @@ def test_delete_customer(client, session, customer_with_credentials):
     deleted_customer = session.get(Customer, customer_id)
     assert deleted_customer.is_active == StatusEnum.INACTIVE
 
+def test_list_customers_paginated(
+    client,
+    admin_user,
+    customer_with_credentials
+):
+    token = login(client, admin_user["email"], admin_user["password"])
+
+    response = client.get(
+        "/customers?page=1&size=1",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+
+    body = response.json()
+
+    # estructura de paginación
+    assert "items" in body
+    assert "total" in body
+    assert "page" in body
+    assert "size" in body
+
+    # comportamiento esperado
+    assert body["page"] == 1
+    assert body["size"] == 1
+    assert len(body["items"]) <= 1

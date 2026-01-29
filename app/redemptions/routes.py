@@ -1,11 +1,14 @@
 from fastapi import APIRouter, status, HTTPException, Depends
-from sqlmodel import select
+from fastapi_pagination import Page
+from fastapi_pagination.ext.sqlmodel import paginate
+from sqlmodel import select, desc
 from app.redemptions.models import Redemption
 from app.redemptions.schemas import RedemptionRead, RedemptionCreate
 from app.shop.models import Product
 from app.customers.models import Customer
 from app.core.database import SessionDep
 from app.core.enums import ProductType, RoleEnum
+from app.core.pagination import DefaultPagination
 from app.auth.dependencies import get_current_customer, check_admin, get_current_user
 from app.auth.models import User
 
@@ -64,18 +67,24 @@ def create_redemption(data: RedemptionCreate,
 
     return redemption
 
-@router.get("/", response_model=list[RedemptionRead], status_code=status.HTTP_200_OK)
-def list_redemptions(session: SessionDep, admin: User = Depends(check_admin)):
-    return session.exec(select(Redemption)).all()
+@router.get("/", response_model=Page[RedemptionRead], status_code=status.HTTP_200_OK)
+def list_redemptions(session: SessionDep,
+                     admin: User = Depends(check_admin),
+                     params: DefaultPagination = Depends()):
+    query = select(Redemption).order_by(desc(Redemption.id))
+    return paginate(session, query, params)
 
-@router.get("/me", response_model=list[RedemptionRead])
+@router.get("/me", response_model=Page[RedemptionRead])
 def list_my_redemptions(
     session: SessionDep,
-    current_customer: Customer = Depends(get_current_customer)
+    current_customer: Customer = Depends(get_current_customer),
+    params: DefaultPagination = Depends()
 ):
-    return session.exec(
-        select(Redemption).where(Redemption.customer_id == current_customer.id)
-    ).all()
+    query = select(Redemption).where(
+        Redemption.customer_id == current_customer.id).order_by(desc(Redemption.id))
+    
+    return paginate(
+        session, query, params)
 
 @router.get("/{redemption_id}", response_model=RedemptionRead)
 def read_redemption(
