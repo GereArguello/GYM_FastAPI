@@ -1,17 +1,9 @@
 from fastapi import status
 import pytest
 from sqlmodel import select
-from datetime import datetime, timezone, timedelta
-
-from app.core.enums import ProductType, MembershipStatusEnum
-from app.attendances.models import Attendance
-from app.attendances.services import finalize_attendance, apply_attendance_points
-from app.shop.models import Product
-from app.customers.models import Customer, CustomerMembership
-
+from app.core.enums import MembershipStatusEnum
+from app.customers.models import CustomerMembership
 from app.helpers import login
-
-
 
 
 @pytest.fixture(name="membership")
@@ -84,115 +76,6 @@ def customer_with_pending_membership(
     }
 
 
-
-
-#------ TESTING PARA REDEMPTION ------#
-@pytest.fixture(name="customer_with_75_points")
-def customer_with_75_points(client, session, customer_with_membership):
-    customer = session.get(Customer, customer_with_membership["id"])
-    ATTENDANCES = 5
-
-    for _ in range(ATTENDANCES):
-        #Crear asistencia
-        response = client.post(
-            "/attendances/",
-            json={"customer_id": customer_with_membership["id"]}
-        )
-
-        assert response.status_code == 201, response.json()
-
-        attendance_id = response.json()["id"]
-
-        # traer asistencia desde DB
-        attendance = session.get(Attendance, attendance_id)
-
-        # Simular una asistencia válida
-        attendance.check_in = datetime.now(timezone.utc) - timedelta(minutes=60)
-        attendance.check_out = datetime.now(timezone.utc)
-
-        finalize_attendance(attendance)
-        apply_attendance_points(attendance, customer)
-
-        session.commit()
-
-    customer = session.get(Customer, customer_with_membership["id"])
-
-    return customer
-
-@pytest.fixture(name="expensive_product")
-def expensive_product(session):
-    product = Product(
-        name="Producto caro",
-        description="ejemplo",
-        product_type=ProductType.POINTS,
-        price=500,
-        stock=5,
-        is_active=True
-    )
-    session.add(product)
-    session.commit()
-    session.refresh(product)
-    return product
-
-
-@pytest.fixture(name="cheap_product")
-def cheap_product(session):
-    product = Product(
-        name="Producto barato",
-        description="ejemplo",
-        product_type=ProductType.POINTS,
-        price=70,
-        stock=5,
-        is_active=True
-    )
-    session.add(product)
-    session.commit()
-    session.refresh(product)
-    return product
-
-
-@pytest.fixture(name="product_is_not_active")
-def product_is_not_active(session):
-    product = Product(
-        name="Producto inactivo",
-        description="ejemplo",
-        product_type=ProductType.POINTS,
-        price=50,
-        stock=5,
-        is_active=False
-    )
-    session.add(product)
-    session.commit()
-    session.refresh(product)
-    return product
-
-@pytest.fixture(name="product_with_money")
-def product_with_money(session):
-    product = Product(
-        name="Producto inactivo",
-        description="ejemplo",
-        product_type=ProductType.MONEY,
-        price=50,
-        stock=5,
-    )
-    session.add(product)
-    session.commit()
-    session.refresh(product)
-    return product
-
-@pytest.fixture(name="product_without_stock")
-def product_without_stock(session):
-    product = Product(
-        name="Producto sin stock",
-        description="ejemplo",
-        product_type=ProductType.POINTS,
-        price=50,
-        stock=0,
-    )
-    session.add(product)
-    session.commit()
-    session.refresh(product)
-    return product
 
 
         

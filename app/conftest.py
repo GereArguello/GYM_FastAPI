@@ -11,6 +11,12 @@ from app.core.enums import RoleEnum
 from app.auth.models import User
 from app.helpers import login
 
+from freezegun import freeze_time
+from datetime import datetime, timedelta, timezone
+from app.attendances.services import finalize_attendance, apply_attendance_points
+from app.attendances.models import Attendance
+from app.customers.models import Customer
+
 
 
 sqlite_url = "sqlite://"

@@ -1,25 +1,35 @@
 from fastapi import status
+from app.helpers import login
 
-def test_should_fail_if_product_not_found(client, customer_with_75_points):
-    customer_id = customer_with_75_points.id
-    product_id = 999
+def test_should_fail_if_product_not_found(client,customer_with_credentials):
+    c = customer_with_credentials
 
-    response = client.post(f"/redemptions/{customer_id}",
-                           json={"product_id": product_id,
-                                 "quantity": 1
-                                 })
+    token = login(client, c["email"], c["password"])
+
+    response = client.post(
+        "/redemptions/",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "product_id": 999,
+            "quantity": 1
+        }
+    )
+
     assert response.status_code == status.HTTP_404_NOT_FOUND
     assert response.json()["detail"] == "Producto no encontrado"
 
 def test_should_fail_if_product_is_not_active(
     client,
+    customer_with_credentials,
     customer_with_75_points,
     product_is_not_active
 ):
-    customer_id = customer_with_75_points.id
+    c = customer_with_credentials
+    token = login(client, c["email"], c["password"])
 
     r = client.post(
-        f"/redemptions/{customer_id}",
+        f"/redemptions/",
+        headers={"Authorization": f"Bearer {token}"},
         json={
             "product_id": product_is_not_active.id,
             "quantity": 1
@@ -30,13 +40,17 @@ def test_should_fail_if_product_is_not_active(
 
 def test_should_fail_if_product_is_with_money(
         client,
+        customer_with_credentials,
         customer_with_75_points,
         product_with_money
 ):
-    customer_id = customer_with_75_points.id
+    c = customer_with_credentials
+    token = login(client, c["email"], c["password"])   
+
 
     r = client.post(
-        f"/redemptions/{customer_id}",
+        f"/redemptions/",
+        headers={"Authorization": f"Bearer {token}"},
         json={
             "product_id": product_with_money.id,
             "quantity": 1
@@ -47,13 +61,16 @@ def test_should_fail_if_product_is_with_money(
 
 def test_should_fail_if_product_stock_is_not_enought(
         client,
+        customer_with_credentials,
         customer_with_75_points,
         product_without_stock
 ):
-    customer_id = customer_with_75_points.id
+    c = customer_with_credentials
+    token = login(client, c["email"], c["password"])   
 
     r = client.post(
-        f"/redemptions/{customer_id}",
+        f"/redemptions/",
+        headers={"Authorization": f"Bearer {token}"},
         json={
             "product_id": product_without_stock.id,
             "quantity": 1
@@ -64,13 +81,16 @@ def test_should_fail_if_product_stock_is_not_enought(
 
 def test_should_fail_if_customer_points_is_not_enough(
         client,
+        customer_with_credentials,
         customer_with_75_points,
         expensive_product
 ):
-    customer_id = customer_with_75_points.id
+    c = customer_with_credentials
+    token = login(client, c["email"], c["password"])  
 
     r = client.post(
-        f"/redemptions/{customer_id}",
+        f"/redemptions/",
+        headers={"Authorization": f"Bearer {token}"},
         json={
             "product_id": expensive_product.id,
             "quantity": 1
@@ -82,13 +102,16 @@ def test_should_fail_if_customer_points_is_not_enough(
 def test_create_redemption(
         client,
         session,
+        customer_with_credentials,
         customer_with_75_points,
         cheap_product
 ):
-    customer_id = customer_with_75_points.id
+    c = customer_with_credentials
+    token = login(client, c["email"], c["password"])
 
     r = client.post(
-        f"/redemptions/{customer_id}",
+        f"/redemptions/",
+        headers={"Authorization": f"Bearer {token}"},
         json={
             "product_id": cheap_product.id,
             "quantity": 1
@@ -103,43 +126,43 @@ def test_create_redemption(
     assert customer_with_75_points.points_balance == 5
     assert cheap_product.stock == 4
 
-def test_list_redemptions(client, customer_with_75_points, cheap_product):
-    customer_id = customer_with_75_points.id
+def test_list_redemptions(client,
+                          redemption,
+                          admin_user):
+    
+    token = login(client, admin_user["email"], admin_user["password"])
 
-    r = client.post(
-        f"/redemptions/{customer_id}",
-        json={
-            "product_id": cheap_product.id,
-            "quantity": 1
-        }
-    )
-
-    assert r.status_code == status.HTTP_201_CREATED
-
-    response = client.get("/redemptions/")
+    response = client.get("/redemptions/",
+                          headers={"Authorization": f"Bearer {token}"})
 
     assert response.status_code == status.HTTP_200_OK
 
-def test_read_redemption(client, customer_with_75_points, cheap_product):
-    customer_id = customer_with_75_points.id
+def test_list_redemptions_should_fail_for_customer(client,
+                          redemption,
+                          customer_with_credentials):
+    c = customer_with_credentials
+    token = login(client, c["email"], c["password"])
 
-    r = client.post(
-        f"/redemptions/{customer_id}",
-        json={
-            "product_id": cheap_product.id,
-            "quantity": 1
-        }
-    )
+    response = client.get("/redemptions/",
+                          headers={"Authorization": f"Bearer {token}"})
 
-    assert r.status_code == status.HTTP_201_CREATED
-    
-    redemption_id = r.json()["id"]
+    assert response.status_code == status.HTTP_403_FORBIDDEN
 
-    response = client.get(f"/redemptions/{redemption_id}")
+def test_read_redemption(client, customer_with_credentials, redemption, cheap_product):
+    c = customer_with_credentials
+    token = login(client, c["email"], c["password"])
+
+    customer_id = c["customer"]["id"]
+
+    redemption_id = redemption["id"]
+
+    response = client.get(f"/redemptions/{redemption_id}",
+                           headers={"Authorization": f"Bearer {token}"})
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json()["customer_id"] == customer_id
     assert response.json()["points_spent"] == cheap_product.price
+    assert "created_at" in response.json()
     
 
 
