@@ -3,7 +3,7 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlmodel import Session, select
 from app.core.database import get_session
 from app.core.security import decode_token
-from app.core.enums import RoleEnum
+from app.core.enums import RoleEnum, StatusEnum
 from app.auth.models import User
 from app.customers.models import Customer
 
@@ -24,7 +24,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme),session: Session 
     
     user = session.get(User, int(user_id))
 
-    if not user or not user.is_active:
+    if not user or user.status == StatusEnum.INACTIVE:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail="Credenciales inválidas")
 
     return user
@@ -60,7 +60,7 @@ def get_current_user_optional(
         return None
 
     user = session.get(User, int(user_id))
-    if not user or not user.is_active:
+    if not user or user.status == StatusEnum.INACTIVE:
         return None
 
     return user

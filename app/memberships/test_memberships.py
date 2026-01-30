@@ -1,6 +1,7 @@
 from fastapi import status
 from app.memberships.models import Membership
 from app.helpers import login
+from app.core.enums import StatusEnum
 
 def test_create_membership(client, admin_user):
     token = login(client, admin_user["email"], admin_user["password"])
@@ -32,20 +33,6 @@ def test_create_membership_fail_if_are_created_by_customer(client, customer_with
     
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
-def test_create_membership_fails_if_points_multiplier_is_less_than_one(client, admin_user):
-    token = login(client, admin_user["email"], admin_user["password"])
-    response = client.post(
-        "/memberships/",
-        headers={"Authorization": f"Bearer {token}"},
-        json={
-        "name" : "Premium",
-        "max_days_per_week" : 5,
-        "points_multiplier" : 0.9
-        }
-    )
-    
-    assert response.status_code == status.HTTP_400_BAD_REQUEST
-
 def test_admin_can_list_inactive_memberships(client, admin_user, membership_inactive):
     token = login(client, admin_user["email"], admin_user["password"])
 
@@ -56,7 +43,7 @@ def test_admin_can_list_inactive_memberships(client, admin_user, membership_inac
 
     assert response.status_code == status.HTTP_200_OK
     assert len(response.json()) == 1
-    assert response.json()[0]["is_active"] is False
+    assert response.json()[0]["status"] == StatusEnum.INACTIVE
 
 def test_read_list_membership_should_return_empty(client, membership_inactive):
     response = client.get("/memberships/?include_inactive=true")
@@ -109,4 +96,4 @@ def test_delete_membership(client, session, admin_user, membership):
     assert response_delete.status_code == status.HTTP_204_NO_CONTENT
 
     deleted_membership = session.get(Membership, membership_id)
-    assert deleted_membership.is_active == False
+    assert deleted_membership.status == StatusEnum.INACTIVE

@@ -7,16 +7,9 @@ from sqlmodel import SQLModel, Session
 from app.main import app
 from app.core.database import get_session
 from app.core.security import get_password_hash
-from app.core.enums import RoleEnum
+from app.core.enums import RoleEnum, StatusEnum
 from app.auth.models import User
 from app.helpers import login
-
-from freezegun import freeze_time
-from datetime import datetime, timedelta, timezone
-from app.attendances.services import finalize_attendance, apply_attendance_points
-from app.attendances.models import Attendance
-from app.customers.models import Customer
-
 
 
 sqlite_url = "sqlite://"
@@ -50,7 +43,7 @@ def admin_user(session):
         email="admin@test.com",
         hashed_password=get_password_hash("admin123"),
         role=RoleEnum.ADMIN,
-        is_active=True
+        status=StatusEnum.ACTIVE
     )
 
     session.add(admin)

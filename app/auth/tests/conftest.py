@@ -1,7 +1,7 @@
 import pytest
 from sqlmodel import select
 from app.auth.models import User
-from app.core.enums import RoleEnum
+from app.core.enums import RoleEnum, StatusEnum
 
 
 @pytest.fixture(name="user_is_not_active")
@@ -19,7 +19,7 @@ def user_is_not_active(client, session):
 
     email = payload["email"]
     user = session.exec(select(User).where(User.email == email)).first()
-    user.is_active = False
+    user.status = StatusEnum.INACTIVE
     session.commit()
 
     assert user is not None

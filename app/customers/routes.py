@@ -45,7 +45,7 @@ def read_me(current_customer: Customer = Depends(get_current_customer)):
 @router.get("/", response_model=Page[CustomerRead])
 def list_customers(
     session: SessionDep,
-    include_inactive: bool = False, 
+    status: StatusEnum | None  = None, 
     search: str | None = None,
     admin: User = Depends(check_admin),
     params: DefaultPagination = Depends()
@@ -53,8 +53,8 @@ def list_customers(
     
     query = select(Customer)
 
-    if not include_inactive:
-        query = query.where(Customer.is_active == StatusEnum.ACTIVE)
+    if status:
+        query = query.where(Customer.status == StatusEnum.ACTIVE)
 
     if search:
             query = query.where(
@@ -84,7 +84,7 @@ def update_customer(customer_data: CustomerUpdate,
 @router.delete("/me/deactivate", status_code=status.HTTP_204_NO_CONTENT)
 def deactivate_customer_me(session: SessionDep,
                     current_customer: Customer = Depends(get_current_customer)):
-    current_customer.is_active = StatusEnum.INACTIVE
+    current_customer.status = StatusEnum.INACTIVE
     session.commit()
 
 #---------ENDPOINTS PARA RELACIONAR CUSTOMERS Y MEMBERSHIPS----------#
@@ -215,7 +215,7 @@ def read_customer(customer_id: int,
                   admin: User = Depends(check_admin)
 ):    
     customer = session.get(Customer, customer_id)
-    if not customer or not customer.is_active:
+    if not customer or customer.status != StatusEnum.ACTIVE:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                             detail="Cliente no encontrado")
     return customer

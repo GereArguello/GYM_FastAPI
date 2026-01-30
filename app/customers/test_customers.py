@@ -19,7 +19,8 @@ def test_create_customer_success(client):
     assert response.status_code == status.HTTP_201_CREATED
     assert data["first_name"] == "Pepe"
     assert data["points_balance"] == 0
-    assert data["is_active"] == "active"
+    assert data["status"] == StatusEnum.ACTIVE
+
 
 
 
@@ -145,7 +146,7 @@ def test_delete_customer(client, session, customer_with_credentials):
     #Validamos que el customer fue eliminado
     customer_id = c["customer"]["id"]
     deleted_customer = session.get(Customer, customer_id)
-    assert deleted_customer.is_active == StatusEnum.INACTIVE
+    assert deleted_customer.status == StatusEnum.INACTIVE
 
 def test_list_customers_paginated(
     client,

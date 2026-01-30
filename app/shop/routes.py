@@ -4,7 +4,7 @@ from sqlmodel import select
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from app.core.database import SessionDep
-from app.core.enums import RoleEnum
+from app.core.enums import RoleEnum, StatusEnum
 from app.core.pagination import ProductPagination
 from app.shop.models import Product
 from app.shop.schemas import ProductRead, ProductCreate, ProductUpdate
@@ -21,15 +21,6 @@ def create_product(product_data: ProductCreate,
                    admin: User = Depends(check_admin)):
     product = Product(**product_data.model_dump())
 
-    if product_data.price < 0: 
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                            detail="El precio no puede ser negativo")
-        
-    if product.stock < 0:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="El stock no puede ser negativo"
-        )
     
     try:
         session.add(product)
@@ -52,7 +43,7 @@ def list_products(session: SessionDep,
 
     # Solo admin puede ver inactivos explícitamente
     if not (current_user and current_user.role == RoleEnum.ADMIN and include_inactive):
-        query= query.where(Product.is_active == True)
+        query= query.where(Product.status == StatusEnum.ACTIVE)
 
     query = query.order_by(Product.price, Product.id)
 
@@ -71,7 +62,7 @@ def read_product(product_id: int,
     
     # Bloqueo de productos inactivos
     if (
-        not product.is_active and
+        not product.status == StatusEnum.ACTIVE and
         not (current_user and current_user.role == RoleEnum.ADMIN)
     ):
         raise HTTPException(
@@ -144,7 +135,7 @@ def activate_product(product_id: int,
             detail="Producto no encontrado"
         )
     
-    product.is_active = True
+    product.status = StatusEnum.ACTIVE
     session.commit()
     session.refresh(product)
     return product
@@ -161,6 +152,5 @@ def delete_product(product_id: int,
             detail="Producto no encontrado"
         )
 
-    product.is_active = False
+    product.status = StatusEnum.INACTIVE
     session.commit()
-    session.refresh(product)

@@ -4,7 +4,7 @@ from sqlalchemy.exc import IntegrityError
 from app.memberships.schemas import MembershipRead, MembershipCreate, MembershipUpdate
 from app.memberships.models import Membership
 from app.core.database import SessionDep
-from app.core.enums import RoleEnum
+from app.core.enums import RoleEnum, StatusEnum
 from app.auth.dependencies import check_admin, get_current_user_optional
 from app.auth.models import User
 
@@ -19,11 +19,6 @@ router = APIRouter(
 def create_membership(membership_data: MembershipCreate,
                       session: SessionDep,
                       admin: User = Depends(check_admin)):
-    if membership_data.points_multiplier < 1:
-        raise HTTPException(
-            status_code=400,
-            detail="El multiplicador de puntos debe ser mayor o igual a 1"
-        )
     
     membership = Membership(**membership_data.model_dump())
 
@@ -40,7 +35,7 @@ def create_membership(membership_data: MembershipCreate,
 @router.get("/", response_model=list[MembershipRead])
 def list_memberships(
     session: SessionDep,
-    include_inactive: bool = False,
+    status: StatusEnum | None = None,
     search: str | None = None,
     current_user: User | None = Depends(get_current_user_optional),
 ):
@@ -48,15 +43,13 @@ def list_memberships(
 
     if current_user and current_user.role == RoleEnum.ADMIN:
         # admin: control total
-        if not include_inactive:
-            query = query.where(Membership.is_active == True)
-
-        if search:
-            query = query.where(Membership.name.ilike(f"%{search}%"))
-
+        if status:
+            query = query.where(Membership.status == status)
     else:
-        # customer o público: solo activas, sin filtros
-        query = query.where(Membership.is_active == True)
+        query = query.where(Membership.status == StatusEnum.ACTIVE)
+
+    if search:
+        query = query.where(Membership.name.ilike(f"%{search}%"))
 
     return session.exec(query).all()
 
@@ -71,7 +64,7 @@ def read_membership(
     query = select(Membership).where(Membership.id == membership_id)
 
     if not (current_user and current_user.role == RoleEnum.ADMIN and include_inactive):
-        query = query.where(Membership.is_active == True)
+        query = query.where(Membership.status == StatusEnum.ACTIVE)
 
     membership = session.exec(query).first()
 
@@ -90,12 +83,6 @@ def update_membership(membership_id: int,
                       membership_data: MembershipUpdate,
                       session: SessionDep,
                       admin: User = Depends(check_admin)):
-
-    if membership_data.points_multiplier is not None and membership_data.points_multiplier < 1:
-        raise HTTPException(
-            status_code=400,
-            detail="El multiplicador de puntos debe ser mayor o igual a 1"
-        )
     
     membership = session.get(Membership, membership_id)
 
@@ -127,5 +114,5 @@ def delete_membership(membership_id: int,
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, 
                             detail="Membresía no encontrada")
     
-    membership.is_active = False
+    membership.status = StatusEnum.INACTIVE
     session.commit()

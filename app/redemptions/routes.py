@@ -7,7 +7,7 @@ from app.redemptions.schemas import RedemptionRead, RedemptionCreate
 from app.shop.models import Product
 from app.customers.models import Customer
 from app.core.database import SessionDep
-from app.core.enums import ProductType, RoleEnum
+from app.core.enums import ProductType, RoleEnum, StatusEnum
 from app.core.pagination import DefaultPagination
 from app.auth.dependencies import get_current_customer, check_admin, get_current_user
 from app.auth.models import User
@@ -26,7 +26,7 @@ def create_redemption(data: RedemptionCreate,
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                             detail="Producto no encontrado")
     
-    if not product.is_active:
+    if product.status != StatusEnum.ACTIVE:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT,
                             detail="Producto no disponible")
     

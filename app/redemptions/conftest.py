@@ -6,7 +6,8 @@ from app.attendances.services import finalize_attendance, apply_attendance_point
 from app.customers.models import Customer
 from app.helpers import login
 from app.shop.models import Product
-from app.core.enums import ProductType
+from app.core.enums import ProductType, StatusEnum
+
 
 ## ----- FIXTURES PARA REDEMPTIONS ---- ##
 @pytest.fixture(name="customer_with_75_points")
@@ -57,7 +58,7 @@ def product_is_not_active(session):
         product_type=ProductType.POINTS,
         price=50,
         stock=5,
-        is_active=False
+        status=StatusEnum.INACTIVE
     )
     session.add(product)
     session.commit()
@@ -100,7 +101,7 @@ def expensive_product(session):
         product_type=ProductType.POINTS,
         price=500,
         stock=5,
-        is_active=True
+        status=StatusEnum.ACTIVE
     )
     session.add(product)
     session.commit()
@@ -115,7 +116,7 @@ def cheap_product(session):
         product_type=ProductType.POINTS,
         price=70,
         stock=5,
-        is_active=True
+        status=StatusEnum.ACTIVE
     )
     session.add(product)
     session.commit()
