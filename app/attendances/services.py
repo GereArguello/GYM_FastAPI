@@ -4,11 +4,42 @@ from app.attendances.models import Attendance
 from app.customers.models import Customer
 
 def finalize_attendance(attendance: Attendance) -> None:
+    """
+    Finaliza una asistencia calculando su duración y determinando su validez.
+
+    La duración se calcula en minutos a partir del check-in y check-out.
+
+    Regla de negocio actual (hardcodeada):
+    - Una asistencia es válida si dura al menos 30 minutos
+      y menos de 300 minutos (5 horas).
+
+    Nota:
+    - Estos valores están hardcodeados actualmente.
+    - En el futuro podrían parametrizarse según el tipo de membresía
+      o configuración del sistema.
+    """
     td = attendance.check_out - attendance.check_in
     attendance.duration_minutes = int(td.total_seconds() / 60)
     attendance.is_valid = 30 <= attendance.duration_minutes < 300
 
 def apply_attendance_points(attendance: Attendance, customer: Customer):
+    """
+    Aplica la asignación de puntos a una asistencia válida.
+
+    Reglas de negocio:
+    - Solo se otorgan puntos si la asistencia es válida.
+    - El cliente debe tener una membresía activa.
+    - Los puntos otorgados dependen del multiplicador de la membresía.
+    - Los puntos se suman directamente al balance del cliente.
+
+    Regla actual (hardcodeada):
+    - Se otorgan 10 puntos base por asistencia válida,
+      multiplicados por el `points_multiplier` de la membresía.
+
+    Nota:
+    - El valor base de puntos (10) está hardcodeado actualmente.
+    - En el futuro podría configurarse por membresía, plan o promoción.
+    """
     active_membership = attendance.customer.active_membership
 
     if attendance.is_valid and active_membership:
@@ -53,6 +84,9 @@ def get_weekly_attendance_count(
     )
 
 def get_open_attendance_today(session: Session, customer_id: int) -> Attendance | None:
+    """
+    Obtiene la asistencia abierta del cliente para el día actual, si existe.
+    """
     today = date.today()
 
     return session.exec(

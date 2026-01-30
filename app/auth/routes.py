@@ -18,12 +18,43 @@ router = APIRouter(
     tags=["auth"])
 
 
-@router.post("/login", response_model=Token, status_code=status.HTTP_200_OK)
-async def login(form_data: OAuth2PasswordRequestForm = Depends(),
-                session: Session = Depends(get_session)):
-    user = authenticate_user(session=session,
-                             email=form_data.username,
-                             password=form_data.password)
+@router.post(
+    "/login",
+    response_model=Token,
+    status_code=status.HTTP_200_OK,
+    summary="Iniciar sesión",
+    description="""
+    Autentica a un usuario y devuelve un token de acceso JWT.
+
+    Características:
+    - Endpoint público.
+    - Valida credenciales mediante email y contraseña.
+    - Devuelve un token JWT para autenticación Bearer.
+    - El token incluye el ID del usuario y su rol.
+    - El token tiene una expiración configurable.
+
+    Seguridad:
+    - Contraseñas verificadas mediante hashing.
+    - No expone información sensible en errores de autenticación.
+
+    Requiere:
+    - Credenciales válidas (email y contraseña).
+    """,
+    responses={
+        200: {"description": "Autenticación exitosa"},
+        401: {"description": "Usuario o contraseña incorrectos"},
+    },
+)
+async def login(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    session: Session = Depends(get_session),
+):
+    user = authenticate_user(
+        session=session,
+        email=form_data.username,
+        password=form_data.password
+    )
+
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -31,7 +62,10 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(),
         )
 
     access_token = create_access_token(
-        data={"sub": str(user.id),"role": user.role},
+        data={
+            "sub": str(user.id),
+            "role": user.role
+        },
         expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     )
 
@@ -39,6 +73,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(),
         "access_token": access_token,
         "token_type": "bearer"
     }
+
 
 @router.get("/admin")
 async def admin_route(current_user: User = Depends(check_admin)):

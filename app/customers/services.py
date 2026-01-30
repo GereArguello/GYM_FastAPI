@@ -8,6 +8,12 @@ from app.core.enums import RoleEnum
 
 
 def register_customer(session: Session, data: CustomerCreate) -> Customer:
+    """
+    Registra un nuevo cliente en el sistema.
+
+    Crea el usuario asociado con rol CUSTOMER y genera la entidad Customer
+    vinculada dentro de la misma transacción.
+    """
     user = User(
         email=data.email,
         hashed_password=get_password_hash(data.password),
@@ -33,6 +39,8 @@ def register_customer(session: Session, data: CustomerCreate) -> Customer:
 
 
 def obtener_ultimo_dia(fecha: datetime):
+    """Devuelve el último día del mes y el primer día del mes siguiente."""
+    
     # 1. Ir al primer día del mes siguiente
     if fecha.month == 12:
         primer_dia_siguiente = datetime(fecha.year + 1, 1, 1)

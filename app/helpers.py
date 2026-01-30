@@ -8,6 +8,16 @@ def login(client, email, password) -> str:
     return response.json()["access_token"]
 
 def create_customer(client, **overrides):
+    """
+    Helper de testing para crear un cliente vía la API.
+
+    Se utiliza en tests para evitar repetir el payload de creación
+    de clientes. Permite sobrescribir campos específicos mediante
+    argumentos keyword.
+
+    Nota:
+    - No debe utilizarse fuera del entorno de tests.
+    """
     payload = {
         "first_name": "Pepe",
         "last_name": "Perez",
