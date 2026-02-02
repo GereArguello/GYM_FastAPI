@@ -1,12 +1,13 @@
 from fastapi import APIRouter, status, HTTPException, Depends
-from typing import Optional, List
+from typing import Optional
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlmodel import select, desc
 from datetime import datetime, timezone
 from app.attendances.schemas import AttendanceRead
 from app.attendances.models import Attendance
-from app.customers.models import Customer, CustomerMembership
+from app.customers.models import Customer
+from app.customermemberships.models import CustomerMembership
 from app.attendances.services import (finalize_attendance, 
                                       get_weekly_attendance_count,
                                       normalize_datetime,

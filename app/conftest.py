@@ -106,7 +106,7 @@ def customer_with_membership(client, customer_with_credentials, membership):
     membership_id = membership["id"]
 
     response = client.post(
-        f"/customers/assign-membership/{membership_id}",
+        f"/customer-memberships/assign/{membership_id}",
         headers={"Authorization": f"Bearer {token}"}
     )
 

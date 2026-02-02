@@ -6,7 +6,7 @@ from app.core.enums import StatusEnum, MembershipStatusEnum
 
 # SOLO PARA IDE, EVITA IMPORTS CIRCULARES
 if TYPE_CHECKING:
-    from app.memberships.models import Membership, CustomerMembership
+    from app.customermemberships.models import CustomerMembership
     from app.attendances.models import Attendance
     from app.redemptions.models import Redemption
 
@@ -32,20 +32,5 @@ class Customer(SQLModel, table=True):
             (cm for cm in self.memberships if cm.status == MembershipStatusEnum.ACTIVE),
             None)
 
-
-
-class CustomerMembership(SQLModel, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
-
-    customer_id: int = Field(foreign_key="customer.id")
-    membership_id: int = Field(foreign_key="membership.id")
-
-    status: MembershipStatusEnum = Field(default=MembershipStatusEnum.ACTIVE)
-
-    start_date: date
-    end_date: Optional[date] = Field(default=None)
-
-    customer: "Customer" = Relationship(back_populates="memberships")
-    membership: "Membership" = Relationship(back_populates="customer_memberships")
 
 

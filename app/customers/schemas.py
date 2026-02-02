@@ -30,16 +30,4 @@ class CustomerUpdate(SQLModel):
     model_config = {
         "extra": "forbid"
     }
-
-class CustomerMembershipRead(SQLModel):
-    id: int
-
-    customer_id: int 
-    membership_id: int 
-
-    status: MembershipStatusEnum
-
-    start_date: date 
-    end_date: Optional[date]
-
-
+    
