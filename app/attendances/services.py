@@ -2,6 +2,7 @@ from sqlmodel import select, Session
 from datetime import date, datetime, timedelta, timezone
 from app.attendances.models import Attendance
 from app.customers.models import Customer
+from app.core.constants import PUNTOS_BASE, ASISTENCIA_MINIMA, ASISTENCIA_MAXIMA
 
 def finalize_attendance(attendance: Attendance) -> None:
     """
@@ -14,13 +15,11 @@ def finalize_attendance(attendance: Attendance) -> None:
       y menos de 300 minutos (5 horas).
 
     Nota:
-    - Estos valores están hardcodeados actualmente.
-    - En el futuro podrían parametrizarse según el tipo de membresía
-      o configuración del sistema.
+    - Estos valores podrían parametrizarse según la configuración del sistema.
     """
     td = attendance.check_out - attendance.check_in
     attendance.duration_minutes = int(td.total_seconds() / 60)
-    attendance.is_valid = 30 <= attendance.duration_minutes < 300
+    attendance.is_valid = ASISTENCIA_MINIMA <= attendance.duration_minutes < ASISTENCIA_MAXIMA
 
 def apply_attendance_points(attendance: Attendance, customer: Customer):
     """
@@ -32,20 +31,19 @@ def apply_attendance_points(attendance: Attendance, customer: Customer):
     - Los puntos otorgados dependen del multiplicador de la membresía.
     - Los puntos se suman directamente al balance del cliente.
 
-    Regla actual (hardcodeada):
+    Regla actual:
     - Se otorgan 10 puntos base por asistencia válida,
       multiplicados por el `points_multiplier` de la membresía.
 
     Nota:
-    - El valor base de puntos (10) está hardcodeado actualmente.
-    - En el futuro podría configurarse por membresía, plan o promoción.
+    - Estos valores podrían parametrizarse según la configuración del sistema.
     """
     active_membership = attendance.customer.active_membership
 
     if attendance.is_valid and active_membership:
         attendance.membership = active_membership.membership
         attendance.membership_id = active_membership.membership_id
-        attendance.points_awarded = 10 * active_membership.membership.points_multiplier
+        attendance.points_awarded = PUNTOS_BASE * active_membership.membership.points_multiplier
         attendance.customer.points_balance += attendance.points_awarded
     else:
         attendance.points_awarded = 0
