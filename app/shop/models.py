@@ -21,8 +21,8 @@ class Product(SQLModel, table=True):
 
     product_type: ProductType
 
-    stock: int = Field(ge=0)
-    price: int = Field(ge=0)
+    stock: int = Field(default=0, ge=0, nullable=False)
+    price: int = Field(default=0,ge=0, nullable=False)
 
     status: StatusEnum = Field(default=StatusEnum.ACTIVE)
 

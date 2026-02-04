@@ -160,3 +160,11 @@ uvicorn app.main:app --reload
 Proyecto desarrollado por **Geremias Arguello** como parte de su formación profesional en backend y APIs de producción.
 
 📍 Enfocado en **Python Backend / FastAPI / Django / APIs REST**
+
+## 🗄️ Database Diagram
+
+El siguiente diagrama representa el modelo de dominio principal del sistema,
+incluyendo la separación entre usuarios, clientes, contratos de membresía
+y eventos históricos como asistencias y redenciones.
+
+![Database Diagram](docs/GYM_Management.svg)

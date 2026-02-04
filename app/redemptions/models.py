@@ -29,7 +29,7 @@ class Redemption(SQLModel, table=True):
     points_spent: int = Field(gt=0)
     quantity: int = Field(default=1, gt=0)
 
-    product_name_snapshot: str
+    product_name_snapshot: str = Field(nullable=False)
 
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc), nullable=False
