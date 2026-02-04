@@ -4,8 +4,7 @@ from typing import Optional, List, TYPE_CHECKING
 from app.core.enums import StatusEnum
 
 if TYPE_CHECKING:
-    from customers.models import CustomerMembership
-    from attendances.models import Attendance
+    from app.customers.models import CustomerMembership
 
 class Membership(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -21,4 +20,3 @@ class Membership(SQLModel, table=True):
     status: StatusEnum = Field(default=StatusEnum.ACTIVE)
 
     customer_memberships: List["CustomerMembership"] = Relationship(back_populates="membership")
-    attendances: List["Attendance"] = Relationship(back_populates="membership")

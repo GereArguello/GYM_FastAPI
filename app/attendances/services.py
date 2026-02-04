@@ -27,26 +27,28 @@ def apply_attendance_points(attendance: Attendance, customer: Customer):
 
     Reglas de negocio:
     - Solo se otorgan puntos si la asistencia es válida.
-    - El cliente debe tener una membresía activa.
-    - Los puntos otorgados dependen del multiplicador de la membresía.
+    - Los puntos dependen del multiplicador de la membresía asociada
+      al CustomerMembership de la asistencia.
     - Los puntos se suman directamente al balance del cliente.
-
-    Regla actual:
-    - Se otorgan 10 puntos base por asistencia válida,
-      multiplicados por el `points_multiplier` de la membresía.
-
-    Nota:
-    - Estos valores podrían parametrizarse según la configuración del sistema.
     """
-    active_membership = attendance.customer.active_membership
 
-    if attendance.is_valid and active_membership:
-        attendance.membership = active_membership.membership
-        attendance.membership_id = active_membership.membership_id
-        attendance.points_awarded = PUNTOS_BASE * active_membership.membership.points_multiplier
-        attendance.customer.points_balance += attendance.points_awarded
-    else:
+    if not attendance.is_valid:
         attendance.points_awarded = 0
+        return
+
+    customer_membership = attendance.customer_membership
+    if not customer_membership:
+        attendance.points_awarded = 0
+        return
+
+    membership = customer_membership.membership
+
+    attendance.points_awarded = int(
+        PUNTOS_BASE * membership.points_multiplier
+    )
+
+    customer.points_balance += attendance.points_awarded
+
 
 def normalize_datetime(dt: datetime) -> datetime:
     return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)

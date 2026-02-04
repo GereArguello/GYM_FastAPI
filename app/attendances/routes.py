@@ -83,7 +83,7 @@ def create_attendance(
 
     attendance = Attendance(
         customer_id=current_customer.id,
-        membership_id=customer_membership.membership_id,
+        customer_membership_id=customer_membership.id,
         check_in=datetime.now(timezone.utc),
     )
 

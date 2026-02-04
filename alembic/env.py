@@ -11,6 +11,7 @@ from sqlmodel import SQLModel
 from app.auth.models import User
 from app.customers.models import Customer
 from app.memberships.models import Membership
+from app.customermemberships.models import CustomerMembership
 from app.attendances.models import Attendance
 from app.shop.models import Product
 

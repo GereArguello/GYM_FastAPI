@@ -6,6 +6,7 @@ from app.core.enums import MembershipStatusEnum
 if TYPE_CHECKING:
     from app.customers.models import Customer
     from app.memberships.models import Membership
+    from app.attendances.models import Attendance
 
 
 class CustomerMembership(SQLModel, table=True):
@@ -21,3 +22,5 @@ class CustomerMembership(SQLModel, table=True):
 
     customer: "Customer" = Relationship(back_populates="memberships")
     membership: "Membership" = Relationship(back_populates="customer_memberships")
+
+    attendances: list["Attendance"] = Relationship(back_populates="customer_membership")
