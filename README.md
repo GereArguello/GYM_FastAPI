@@ -55,11 +55,14 @@ app/
 ├── auth/
 ├── customers/
 ├── memberships/
+├── customermemberships/
 ├── attendances/
 ├── redemptions/
 ├── shop/
 ├── core/
 │   ├── config
+│   ├── constants
+│   ├── pagination
 │   ├── database
 │   ├── security
 │   └── enums

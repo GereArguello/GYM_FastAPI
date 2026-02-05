@@ -139,7 +139,7 @@ def list_customer_memberships(
 
     return paginate(session, query, params)
 
-# TODO: ordenar por end_date cuando status=INACTIVE (histórico de membresías)
+
 @router.get(
     "/me",
     response_model=CustomerMembershipRead,
@@ -165,13 +165,15 @@ def read_my_membership(
     current_customer: Customer = Depends(get_current_customer),
     status: MembershipStatusEnum = MembershipStatusEnum.ACTIVE,
 ):
-    membership = session.exec(
-        select(CustomerMembership)
-        .where(
+    query = select(CustomerMembership).where(
             CustomerMembership.customer_id == current_customer.id,
             CustomerMembership.status == status
         )
-    ).first()
+
+    if status == MembershipStatusEnum.INACTIVE:
+        query = query.order_by(CustomerMembership.end_date.desc())
+    
+    membership = session.exec(query).first()
 
     if not membership:
         raise HTTPException(
