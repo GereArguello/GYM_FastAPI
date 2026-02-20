@@ -6,7 +6,7 @@ from datetime import timedelta
 from app.auth.service import authenticate_user
 from app.core.security import create_access_token
 from app.core.database import get_session
-from app.core.config import ACCESS_TOKEN_EXPIRE_MINUTES
+from app.core.config import settings
 from app.auth.schemas import Token
 from app.auth.dependencies import check_admin
 from app.auth.models import User
@@ -66,7 +66,7 @@ async def login(
             "sub": str(user.id),
             "role": user.role
         },
-        expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     )
 
     return {

@@ -1,5 +1,7 @@
 from fastapi import FastAPI
 from fastapi_pagination import add_pagination
+from app.core.config import settings
+
 from app.customers import routes as customers_router
 from app.memberships import routes as memberships_router
 from app.customermemberships import routes as customermemberships_router
@@ -9,10 +11,14 @@ from app.redemptions import routes as redemptions_router
 from app.auth import routes as auth_router
 import app.models
 
-app = FastAPI()
+
+app = FastAPI(
+    title="Gym Management API",
+    docs_url=None if settings.ENVIRONMENT == "production" else "/docs",
+    redoc_url=None if settings.ENVIRONMENT == "production" else "/redoc",
+)
 
 add_pagination(app)
-
 
 app.include_router(customers_router.router)
 app.include_router(memberships_router.router)
@@ -22,6 +28,10 @@ app.include_router(shop_router.router)
 app.include_router(redemptions_router.router)
 app.include_router(auth_router.router)
 
+
 @app.get("/")
 async def root():
-    return {"Mensaje": "Bienvenido"}
+    return {
+        "message": "Gym API running",
+        "environment": settings.ENVIRONMENT
+    }

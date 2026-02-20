@@ -3,7 +3,7 @@ import bcrypt
 from jose import jwt
 from jose.exceptions import JWTError
 from datetime import datetime, timedelta, timezone
-from app.core.config import SECRET_KEY, ALGORITHM
+from app.core.config import settings
 
 def get_password_hash(password: str) -> str:
     """
@@ -24,15 +24,15 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     #Compara la contraseña proporcionada con el hash almacenado
     return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
 
-def create_access_token(data: dict, expires_delta: timedelta = None):
+def create_access_token(data: dict, expires_delta: timedelta):
     to_encode = data.copy()
-    expire = datetime.now(timezone.utc) + (expires_delta or timedelta(minutes=15))
+    expire = datetime.now(timezone.utc) + expires_delta
     to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
 def decode_token(token: str):
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         return payload
     except JWTError:
         raise HTTPException(
