@@ -15,6 +15,7 @@ from app.memberships.models import Membership
 from app.customermemberships.models import CustomerMembership
 from app.attendances.models import Attendance
 from app.shop.models import Product
+from app.redemptions.models import Redemption
 
 
 # this is the Alembic Config object, which provides
