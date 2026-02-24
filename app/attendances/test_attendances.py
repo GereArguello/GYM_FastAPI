@@ -26,7 +26,7 @@ def test_create_attendance_fails_if_customer_has_no_membership(client, customer_
 
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
-def test_should_fail_if_cuistomer_has_already_an_assistance_today(client, customer_with_membership, attendance):
+def test_should_fail_if_customer_has_already_an_assistance_today(client, customer_with_membership, attendance):
     c = customer_with_membership
     token = login(client, c["email"], c["password"])
 

@@ -85,9 +85,10 @@ def get_weekly_attendance_count(
 
 def get_open_attendance_today(session: Session, customer_id: int) -> Attendance | None:
     """
-    Obtiene la asistencia abierta del cliente para el día actual, si existe.
+    Obtiene la asistencia abierta del cliente para el día actual en UTC, si existe.
     """
-    today = date.today()
+    today = datetime.now(timezone.utc).date()
+
 
     return session.exec(
         select(Attendance)
